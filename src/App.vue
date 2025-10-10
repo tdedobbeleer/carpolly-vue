@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BNavbar, BNavbarBrand, BContainer } from 'bootstrap-vue-next'
+import { BNavbar, BNavbarBrand, BContainer, BApp } from 'bootstrap-vue-next'
 </script>
 
 <template>
