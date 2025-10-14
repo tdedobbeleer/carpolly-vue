@@ -1,6 +1,12 @@
 <template>
   <div class="row justify-content-md-center">
     <div class="col col-md-8">
+      <div v-if="isLoading" class="text-center my-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+      </div>
+      <div v-else>
       <div class="d-flex align-items-center mb-3">
         <h1>{{ polly?.description }}</h1>
         <div class="ms-3 d-flex gap-2">
@@ -74,6 +80,7 @@
           </BCard>
         </BCol>
       </BRow>
+      </div>
     </div>
 
     <AddDriverModal v-model="showModal" :polly="polly" :id="id" @driver-added="onDriverAdded" />
@@ -117,6 +124,7 @@ import type { Polly } from '../models/polly.model'
 const route = useRoute()
 const id = ref(route.params.id as string)
 const polly = ref<Polly | null>(null)
+const isLoading = ref(true)
 const showModal = ref(false)
 const showRemoveModal = ref(false)
 const driverIndex = ref(-1)
@@ -131,6 +139,7 @@ const unsubscribe = ref<(() => void) | null>(null)
 onMounted(() => {
   unsubscribe.value = dataService.subscribeToPolly(id.value, (data) => {
     polly.value = data
+    isLoading.value = false
   })
 })
 

@@ -71,7 +71,5 @@ const onSubmit = async () => {
   background-image: url('/parrot.png');
   background-size: cover;
   background-position: center;
-  border-radius: 50%;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 </style>

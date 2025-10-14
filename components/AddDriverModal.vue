@@ -1,45 +1,49 @@
 <template>
-  <BModal :model-value="modelValue" title="Add Driver" @ok="onSubmit">
+  <BModal :model-value="modelValue" title="Add Driver" @ok="onSubmit($event)">
     <BForm>
-      <BFormGroup label="Whats your name??" label-for="name">
+      <BFormGroup label="Who will drive?" label-for="name">
         <BFormInput
           id="name"
           v-model="name"
+          :class="{ 'is-invalid': nameError }"
           type="text"
         />
+        <div v-if="nameError" class="invalid-feedback">
+          Name is required.
+        </div>
       </BFormGroup>
-      <BAlert v-if="nameError" variant="danger" show>
-        Name is required.
-      </BAlert>
 
       <BFormGroup label="Where do you want to meet? At what Time?" label-for="description">
         <BFormInput
           id="description"
           v-model="description"
+          :class="{ 'is-invalid': descriptionError }"
           type="text"
         />
+        <div v-if="descriptionError" class="invalid-feedback">
+          Description is required.
+        </div>
       </BFormGroup>
-      <BAlert v-if="descriptionError" variant="danger" show>
-        Description is required.
-      </BAlert>
 
       <BFormGroup label="Available spots?" label-for="spots">
         <BFormInput
           id="spots"
           v-model.number="spots"
+          :class="{ 'is-invalid': spotsError }"
           type="number"
         />
+        <div v-if="spotsError" class="invalid-feedback">
+          Spots is required and must be at least 1.
+        </div>
       </BFormGroup>
-      <BAlert v-if="spotsError" variant="danger" show>
-        Spots is required and must be at least 1.
-      </BAlert>
     </BForm>
   </BModal>
 </template>
 
 <script setup lang="ts">
 import { ref, defineProps, defineEmits } from 'vue'
-import { BModal, BForm, BFormGroup, BFormInput, BAlert } from 'bootstrap-vue-next'
+import { BModal, BForm, BFormGroup, BFormInput } from 'bootstrap-vue-next'
+import type { BvTriggerableEvent } from 'bootstrap-vue-next'
 import { dataService } from '../services/dataService'
 import type { Polly } from '../models/polly.model'
 import type { Driver } from '../models/driver.model'
@@ -62,12 +66,13 @@ const nameError = ref(false)
 const descriptionError = ref(false)
 const spotsError = ref(false)
 
-const onSubmit = async () => {
+const onSubmit = async (event: BvTriggerableEvent) => {
   nameError.value = !name.value.trim()
   descriptionError.value = !description.value.trim()
   spotsError.value = spots.value < 1
 
   if (nameError.value || descriptionError.value || spotsError.value) {
+    event.preventDefault()
     return
   }
 
@@ -79,14 +84,14 @@ const onSubmit = async () => {
   }
 
   if (props.polly) {
-    props.polly.drivers = props.polly.drivers || []
-    props.polly.drivers.push(driver)
+    const updatedDrivers = [...(props.polly.drivers || []), driver]
     try {
-      await dataService.updatePolly(props.id, { drivers: props.polly.drivers })
+      await dataService.updatePolly(props.id, { drivers: updatedDrivers })
       emit('driver-added')
       emit('update:modelValue', false)
     } catch (error) {
       console.error('Error adding driver:', error)
+      event.preventDefault()
     }
   }
 }
