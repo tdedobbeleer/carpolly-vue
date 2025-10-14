@@ -1,28 +1,29 @@
 <template>
-  <div class="row justify-content-md-center">
-    <div class="col col-md-6">
+  <BRow class="justify-content-md-center">
+    <BCol md="6">
+      <BCard bg-variant="light" class="parrot-card">
       <BForm @submit.prevent="onSubmit">
         <BFormGroup label="Describe your Polly:" label-for="description">
           <BFormInput
             id="description"
             v-model="description"
+            :class="{ 'is-invalid': descriptionError }"
             type="text"
           />
+          <div class="invalid-feedback" v-if="descriptionError">Description is required.</div>
         </BFormGroup>
-        <BAlert class="p-1" v-if="descriptionError" variant="danger" show>
-          Description is required.
-        </BAlert>
-        <BButton class="p-2" type="submit" variant="primary">Create a Carpolly!</BButton>
+        <BButton class="mt-3" type="submit" variant="primary">Create a Carpolly!</BButton>
       </BForm>
-    </div>
-  </div>
+      </BCard>
+    </BCol>
+  </BRow>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
 import { v4 as uuidv4 } from 'uuid'
 import { useRouter } from 'vue-router'
-import { BForm, BFormGroup, BFormInput, BAlert, BButton } from 'bootstrap-vue-next'
+import { BForm, BFormGroup, BFormInput, BButton, BCard, BCol, BRow } from 'bootstrap-vue-next'
 import { dataService } from '../services/dataService'
 import type { Polly } from '../models/polly.model'
 
@@ -54,5 +55,23 @@ const onSubmit = async () => {
 </script>
 
 <style scoped>
-/* Add styles if needed */
+.parrot-card {
+  position: relative;
+  overflow: visible;
+}
+
+.parrot-card::after {
+  content: '';
+  position: absolute;
+  top: 65%;
+  right: -65px;
+  transform: translateY(-50%);
+  width: 80px;
+  height: 80px;
+  background-image: url('/parrot.png');
+  background-size: cover;
+  background-position: center;
+  border-radius: 50%;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
 </style>

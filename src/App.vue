@@ -4,8 +4,8 @@ import { BNavbar, BContainer, BApp } from 'bootstrap-vue-next'
 
 <template>
     <BApp>
-        <BNavbar toggleable="lg" type="light" variant="light" class="m-2 position-relative">
-          <img src="/logo.png" class="float-start img-thumbnail me-2 logo" alt="Carpolly Logo">
+        <BNavbar toggleable="lg" type="light" class="m-2 position-relative">
+          <img src="/logo.png" class="float-end me-2 logo" alt="Carpolly Logo">
           <h1 class="d-lg-none ms-2">Carpolly</h1>
           <h1 class="position-absolute top-50 start-50 translate-middle d-none d-lg-block">Carpolly</h1>
         </BNavbar>
@@ -17,13 +17,13 @@ import { BNavbar, BContainer, BApp } from 'bootstrap-vue-next'
 
 <style>
 .logo {
-  max-width: 75px;
+  max-width: 85px !important;
   height: auto;
 }
 
 @media (min-width: 768px) {
   .logo {
-    max-width: 150px;
+    max-width: 160px !important;
   }
 }
 

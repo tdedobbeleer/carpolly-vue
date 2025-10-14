@@ -22,9 +22,16 @@
         <h2>Drivers and spots available</h2>
         <BButton class="ms-auto" @click="showModal = true">Add <span class="bi bi-car-front-fill"></span></BButton>
       </div>
-      <BRow>
-        <BCol class="mb-3" md="6" v-for="(driver, index) in polly?.drivers" :key="index">
-          <BCard style="height: 100%;" class="border-info shadow">
+      <BRow v-if="!polly?.drivers?.length">
+        <BCol class="mb-3" md="6" offset-md="3">
+          <BCard class="border-info shadow text-center no-drivers-card">
+            <p>No drivers yet! Be a good parrot and offer a ride <i class="bi bi-emoji-smile-upside-down"></i></p>
+          </BCard>
+        </BCol>
+      </BRow>
+      <BRow v-else>
+        <BCol class="car-col" md="6" v-for="(driver, index) in polly?.drivers" :key="index">
+          <BCard class="border-info shadow car-card" :class="getDynamicParrotClass(index+1)">
             <BCardHeader>
               <div class="text-center">
                 <div class="btn btn-lg btn-primary disabled position-relative">
@@ -154,6 +161,15 @@ const removeDriver = async () => {
   }
 }
 
+const getDynamicParrotClass = (index : number) => {
+  if (index % 2 === 0 && index % 4 !== 0) {
+    return 'parrot-right'
+  }
+  else if (index % 3 === 0) {
+    return 'parrot-left'
+  }
+}
+
 const countProgress = (current: number, max: number) => {
   if (current === 0 || max === 0) {
     return 0
@@ -233,6 +249,82 @@ const addConsumer = async () => {
 }
 </script>
 
-<style scoped>
-/* Add styles if needed */
+<style>
+.car-card {
+  position: relative;
+  overflow: visible;
+}
+
+.car-col {
+  margin-bottom: 60px;
+  min-height: 100%;
+}
+
+.no-drivers-card {
+  position: relative;
+  overflow: visible;
+}
+
+.no-drivers-card::after {
+  content: '';
+  position: absolute;
+  bottom: -80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 100px;
+  background-image: url('/parrot-below.png');
+  background-size: cover;
+  background-position: center;
+}
+
+@media (min-width: 768px) {
+  .car-card.parrot-right::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: -60px;
+    transform: translateY(-50%);
+    width: 80px;
+    height: 80px;
+    background-image: url('/parrot.png');
+    background-size: cover;
+    background-position: center;
+  }
+
+  .car-card.parrot-left::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: -60px;
+    transform: translateY(-50%);
+    width: 80px;
+    height: 80px;
+    background-image: url('/parrot-left.png');
+    background-size: cover;
+    background-position: center;
+  }
+
+  .car-col {
+    margin-bottom: 10px;
+  }
+
+  .no-drivers-card::after {
+    display: none;
+  }
+}
+@media (max-width: 768px) {
+.car-card::after {
+    content: '';
+    position: absolute;
+    bottom: -80px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 100px;
+    background-image: url('/parrot-below.png');
+    background-size: cover;
+    background-position: center;
+  }
+}
 </style>
