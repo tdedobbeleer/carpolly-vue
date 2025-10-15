@@ -103,7 +103,8 @@ class DataService {
               if (consumer.id) {
                 // Update existing consumer
                 const consumerDoc = doc(consumersCollection, consumer.id)
-                const { id, ...consumerData } = consumer
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const { id: _, ...consumerData } = consumer
                 await updateDoc(consumerDoc, consumerData)
               } else {
                 // Add new consumer
