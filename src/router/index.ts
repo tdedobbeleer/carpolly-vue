@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import CreatePolly from '../../components/CreatePolly.vue'
 import GetPolly from '../../components/GetPolly.vue'
+import FAQ from '../../components/FAQ.vue'
+import About from '../../components/About.vue'
 
 const routes = [
   {
@@ -13,6 +15,16 @@ const routes = [
     name: 'GetPolly',
     component: GetPolly,
     props: true
+  },
+  {
+    path: '/faq',
+    name: 'FAQ',
+    component: FAQ
+  },
+  {
+    path: '/about',
+    name: 'About',
+    component: About
   }
 ]
 

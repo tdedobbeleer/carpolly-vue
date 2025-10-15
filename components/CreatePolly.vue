@@ -56,21 +56,4 @@ const onSubmit = async () => {
 </script>
 
 <style scoped>
-.parrot-card {
-  position: relative;
-  overflow: visible;
-}
-
-.parrot-card::after {
-  content: '';
-  position: absolute;
-  top: 65%;
-  right: -65px;
-  transform: translateY(-50%);
-  width: 80px;
-  height: 80px;
-  background-image: url('/parrot.png');
-  background-size: cover;
-  background-position: center;
-}
 </style>
