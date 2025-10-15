@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions for validation
+    function isValidPolly(polly) {
+      return polly.keys().hasAll(['description', 'created'])
+        && polly.description is string
+        && polly.description.trim().size() > 0
+        && polly.description.size() <= 60
+        && polly.created is timestamp;
+    }
+
+    function isValidDriver(driver) {
+      return driver.keys().hasAll(['name', 'description', 'spots'])
+        && driver.name is string
+        && driver.name.trim().size() > 0
+        && driver.name.size() <= 60
+        && driver.description is string
+        && driver.description.trim().size() > 0
+        && driver.description.size() <= 255
+        && driver.spots is number
+        && driver.spots >= 1;
+    }
+
+    function isValidConsumer(consumer) {
+      return consumer.keys().hasAll(['name'])
+        && consumer.name is string
+        && consumer.name.trim().size() > 0
+        && consumer.name.size() <= 60
+        && (!consumer.keys().hasAny(['comments']) || (consumer.comments is string && consumer.comments.size() <= 255));
+    }
+
+    // Pollies collection
+    match /pollies/{polly} {
+      allow read: if true;
+      allow create: if isValidPolly(request.resource.data);
+      allow update: if isValidPolly(request.resource.data);
+      allow delete: if false;
+
+      // Drivers subcollection
+      match /drivers/{driver} {
+        allow read: if true;
+        allow create: if isValidDriver(request.resource.data);
+        allow update: if isValidDriver(request.resource.data);
+        allow delete: if true;
+
+        // Consumers subcollection
+        match /consumers/{consumer} {
+          allow read: if true;
+          allow create: if isValidConsumer(request.resource.data);
+          allow update: if isValidConsumer(request.resource.data);
+          allow delete: if true;
+        }
+      }
+    }
+  }
+}

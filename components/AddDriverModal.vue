@@ -7,9 +7,10 @@
           v-model="name"
           :class="{ 'is-invalid': nameError }"
           type="text"
+          maxlength="60"
         />
         <div v-if="nameError" class="invalid-feedback">
-          Name is required.
+          Name is required and must be 60 characters or less.
         </div>
       </BFormGroup>
 
@@ -19,9 +20,10 @@
           v-model="description"
           :class="{ 'is-invalid': descriptionError }"
           type="text"
+          maxlength="255"
         />
         <div v-if="descriptionError" class="invalid-feedback">
-          Description is required.
+          Description is required and must be 255 characters or less.
         </div>
       </BFormGroup>
 
@@ -67,8 +69,8 @@ const descriptionError = ref(false)
 const spotsError = ref(false)
 
 const onSubmit = async (event: BvTriggerableEvent) => {
-  nameError.value = !name.value.trim()
-  descriptionError.value = !description.value.trim()
+  nameError.value = !name.value.trim() || name.value.length > 60
+  descriptionError.value = !description.value.trim() || description.value.length > 255
   spotsError.value = spots.value < 1
 
   if (nameError.value || descriptionError.value || spotsError.value) {

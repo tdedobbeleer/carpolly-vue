@@ -6,6 +6,12 @@
           <span class="visually-hidden">Loading...</span>
         </div>
       </div>
+      <div v-else-if="!polly" class="text-center my-5">
+        <div class="alert alert-warning" role="alert">
+          <i class="bi bi-exclamation-triangle"></i>
+          Polly not found! It doesn't exist or may have been deleted.
+        </div>
+      </div>
       <div v-else>
       <div class="d-flex align-items-center mb-3">
         <h1>{{ polly?.description }}</h1>
@@ -35,9 +41,9 @@
           </BCard>
         </BCol>
       </BRow>
-      <BRow v-else>
-        <BCol class="car-col" md="6" v-for="(driver, index) in polly?.drivers" :key="index">
-          <BCard class="border-info shadow car-card" :class="getDynamicParrotClass(index+1)">
+      <BRow v-else class="row-cols-1 row-cols-md-2 g-4">
+        <BCol class="car-bcol" v-for="(driver, index) in polly?.drivers" :key="index">
+          <BCard class="border-info shadow car-card h-100" :class="getDynamicParrotClass(index+1)">
             <BCardHeader>
               <div class="text-center">
                 <div class="btn btn-lg btn-primary disabled position-relative">
@@ -89,35 +95,16 @@
       <p>Are you sure you want to remove this driver?</p>
     </BModal>
 
-    <BModal v-model="showJoinModal" title="Join Driver" @ok="addConsumer">
-      <BForm>
-        <BFormGroup label="Your Name:" label-for="consumerName">
-          <BFormInput
-            id="consumerName"
-            v-model="consumerName"
-            :class="{ 'is-invalid': nameError }"
-            type="text"
-            required
-          />
-          <div class="invalid-feedback" v-if="nameError">Name is required.</div>
-        </BFormGroup>
-        <BFormGroup label="Comments (optional):" label-for="consumerComments">
-          <BFormTextarea
-            id="consumerComments"
-            v-model="consumerComments"
-            rows="3"
-          />
-        </BFormGroup>
-      </BForm>
-    </BModal>
+    <AddConsumerModal v-model="showJoinModal" @consumer-added="onConsumerAdded" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { BButton, BButtonGroup, BProgress, BModal, BForm, BFormGroup, BFormInput, BFormTextarea, BCard, BCardBody, BCardFooter, BCardHeader, BCol, BRow, BListGroup, BListGroupItem } from 'bootstrap-vue-next'
+import { BButton, BButtonGroup, BProgress, BModal, BCard, BCardBody, BCardFooter, BCardHeader, BCol, BRow, BListGroup, BListGroupItem } from 'bootstrap-vue-next'
 import AddDriverModal from './AddDriverModal.vue'
+import AddConsumerModal from './AddConsumerModal.vue'
 import { dataService } from '../services/dataService'
 import type { Polly } from '../models/polly.model'
 
@@ -130,9 +117,6 @@ const showRemoveModal = ref(false)
 const driverIndex = ref(-1)
 const showJoinModal = ref(false)
 const joinDriverIndex = ref(-1)
-const consumerName = ref('')
-const consumerComments = ref('')
-const nameError = ref(false)
 const expandedItems = ref<Map<number, Set<number>>>(new Map())
 const unsubscribe = ref<(() => void) | null>(null)
 
@@ -191,9 +175,6 @@ const countProgress = (current: number, max: number) => {
 
 const openJoinModal = (index: number) => {
   joinDriverIndex.value = index
-  consumerName.value = ''
-  consumerComments.value = ''
-  nameError.value = false
   showJoinModal.value = true
 }
 const toggleExpanded = (driverIdx: number, consumerIdx: number) => {
@@ -230,31 +211,19 @@ const shareOnSignal = () => {
   window.open(`https://signal.me/?text=${encodeURIComponent(text)}`, '_blank')
 }
 
-const addConsumer = async () => {
-  if (!consumerName.value.trim()) {
-    nameError.value = true
-    return
-  }
-  nameError.value = false
+const onConsumerAdded = async (consumer: { name: string; comments: string }) => {
   if (polly.value && joinDriverIndex.value >= 0 && polly.value.drivers) {
     const driver = polly.value.drivers[joinDriverIndex.value]
     if (driver) {
       driver.consumers = driver.consumers || []
-      driver.consumers.push({
-        name: consumerName.value,
-        comments: consumerComments.value || ""
-      })
+      driver.consumers.push(consumer)
       try {
         await dataService.updatePolly(id.value, { drivers: polly.value.drivers })
-        showJoinModal.value = false
-        consumerName.value = ''
-        consumerComments.value = ''
       } catch (error) {
         console.error('Error adding consumer:', error)
       }
     }
   }
-
 }
 </script>
 
@@ -262,11 +231,6 @@ const addConsumer = async () => {
 .car-card {
   position: relative;
   overflow: visible;
-}
-
-.car-col {
-  margin-bottom: 60px;
-  min-height: 100%;
 }
 
 .no-drivers-card {
@@ -314,10 +278,6 @@ const addConsumer = async () => {
     background-position: center;
   }
 
-  .car-col {
-    margin-bottom: 10px;
-  }
-
   .no-drivers-card::after {
     display: none;
   }
@@ -334,6 +294,9 @@ const addConsumer = async () => {
     background-image: url('/parrot-below.png');
     background-size: cover;
     background-position: center;
+  }
+  .car-bcol {
+    margin-bottom: 35px;
   }
 }
 </style>

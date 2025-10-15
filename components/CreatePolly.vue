@@ -9,8 +9,9 @@
             v-model="description"
             :class="{ 'is-invalid': descriptionError }"
             type="text"
+            maxlength="60"
           />
-          <div class="invalid-feedback" v-if="descriptionError">Description is required.</div>
+          <div class="invalid-feedback" v-if="descriptionError">Description is required and must be 60 characters or less.</div>
         </BFormGroup>
         <BButton class="mt-3" type="submit" variant="primary">Create a Carpolly!</BButton>
       </BForm>
@@ -32,7 +33,7 @@ const description = ref('')
 const descriptionError = ref(false)
 
 const onSubmit = async () => {
-  if (!description.value.trim()) {
+  if (!description.value.trim() || description.value.length > 60) {
     descriptionError.value = true
     return
   }
