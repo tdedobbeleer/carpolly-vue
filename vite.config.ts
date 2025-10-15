@@ -15,4 +15,15 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['vue', 'vue-router'],
+          firebase: ['firebase/app', 'firebase/firestore'],
+          ui: ['bootstrap-vue-next']
+        }
+      }
+    }
+  }
 })
