@@ -12,7 +12,7 @@
             </div>
           </div>
           <div class="arrow"><i class="bi bi-heart-arrow"></i></div>
-          <div class="step">
+          <div class="step parrot-card">
             <div class="step-number">2</div>
             <div class="step-content">
               <h3>Share the Polly URL</h3>
@@ -95,5 +95,10 @@
 
 .arrow i {
   transform: rotate(90deg);
+}
+@media (max-width: 768px) {
+  .parrot-card::after {
+    left: 10%;
+  }
 }
 </style>
