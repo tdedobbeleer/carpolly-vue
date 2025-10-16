@@ -61,7 +61,12 @@
       </BRow>
       <BRow v-else class="row-cols-1 row-cols-md-2 g-4">
         <BCol class="car-bcol" v-for="(driver, index) in polly?.drivers" :key="index">
-          <BCard class="border-info shadow car-card h-100" :class="getDynamicParrotClass(index+1)">
+          <BCard class="border-info shadow car-card h-100 position-relative" :class="getDynamicParrotClass(index+1)">
+            <div v-if="updatingDrivers.has(index)" class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-flex align-items-center justify-content-center" style="z-index: 10;">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </div>
             <BCardHeader>
               <div class="text-center">
                 <div class="btn btn-lg btn-primary disabled position-relative">
@@ -142,6 +147,7 @@ const editingTitle = ref('')
 const showEditIcon = ref(false)
 const titleInput = ref<HTMLInputElement | null>(null)
 const addDriverModal = useTemplateRef('addDriverModal')
+const updatingDrivers = ref<Set<number>>(new Set())
 
 onMounted(() => {
   unsubscribe.value = dataService.subscribeToPolly(id.value, (data) => {
@@ -167,12 +173,14 @@ const confirmRemove = (index: number) => {
 
 const removeDriver = async () => {
   if (polly.value && driverIndex.value >= 0 && polly.value.drivers) {
-    polly.value.drivers.splice(driverIndex.value, 1)
-    try {
-      await dataService.updatePolly(id.value, { drivers: polly.value.drivers })
-      showRemoveModal.value = false
-    } catch (error) {
-      console.error('Error removing driver:', error)
+    const driverToRemove = polly.value.drivers[driverIndex.value]
+    if (driverToRemove && driverToRemove.id) {
+      try {
+        await dataService.deleteDriver(id.value, driverToRemove.id)
+        showRemoveModal.value = false
+      } catch (error) {
+        console.error('Error removing driver:', error)
+      }
     }
   }
 }
@@ -242,17 +250,21 @@ const shareOnSignal = () => {
 }
 
 const onConsumerAdded = async (consumer: { name: string; comments: string }) => {
-  if (polly.value && joinDriverIndex.value >= 0 && polly.value.drivers) {
-    const driver = polly.value.drivers[joinDriverIndex.value]
-    if (driver) {
-      driver.consumers = driver.consumers || []
-      driver.consumers.push(consumer)
-      try {
-        await dataService.updatePolly(id.value, { drivers: polly.value.drivers })
-      } catch (error) {
-        console.error('Error adding consumer:', error)
+  try {
+    // Show loading state
+    updatingDrivers.value.add(joinDriverIndex.value)
+    // Create consumer via API
+    if (polly.value && joinDriverIndex.value >= 0 && polly.value.drivers) {
+      const driver = polly.value.drivers[joinDriverIndex.value]
+      if (driver && driver.id) {
+        await dataService.createConsumer(id.value, driver.id, consumer)
       }
     }
+  } catch (error) {
+    console.error('Error adding consumer:', error)
+  } finally {
+    // Hide loading state
+    updatingDrivers.value.delete(joinDriverIndex.value)
   }
 }
 

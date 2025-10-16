@@ -85,23 +85,20 @@ const onSubmit = async (event: BvTriggerableEvent) => {
     consumers: []
   }
 
-  if (props.polly) {
-    const updatedDrivers = [...(props.polly.drivers || []), driver]
-    try {
-      await dataService.updatePolly(props.id, { drivers: updatedDrivers })
-      // Reset form fields
-      name.value = ''
-      description.value = ''
-      spots.value = 0
-      nameError.value = false
-      descriptionError.value = false
-      spotsError.value = false
-      emit('driver-added')
-      modal.value?.hide()
-    } catch (error) {
-      console.error('Error adding driver:', error)
-      event.preventDefault()
-    }
+  try {
+    await dataService.createDriver(props.id, driver)
+    // Reset form fields
+    name.value = ''
+    description.value = ''
+    spots.value = 0
+    nameError.value = false
+    descriptionError.value = false
+    spotsError.value = false
+    emit('driver-added')
+    modal.value?.hide()
+  } catch (error) {
+    console.error('Error adding driver:', error)
+    event.preventDefault()
   }
 }
 
