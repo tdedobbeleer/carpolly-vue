@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app'
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore'
 import { getAuth, connectAuthEmulator } from 'firebase/auth'
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -12,6 +13,14 @@ const firebaseConfig = {
 }
 
 const app = initializeApp(firebaseConfig)
+
+// Initialize App Check with reCAPTCHA v3
+// In production, use a proper reCAPTCHA site key
+initializeAppCheck(app, {
+  provider: new ReCaptchaV3Provider(import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'),
+  isTokenAutoRefreshEnabled: true
+})
+
 export const db = getFirestore(app)
 export const auth = getAuth(app)
 if (location.hostname === "localhost") {
