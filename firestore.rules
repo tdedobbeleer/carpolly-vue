@@ -32,7 +32,7 @@ service cloud.firestore {
 
     // Pollies collection
     match /pollies/{polly} {
-      allow read: if true;
+      allow get: if true;
       allow create: if isValidPolly(request.resource.data);
       allow update: if isValidPolly(request.resource.data);
       allow delete: if false;
