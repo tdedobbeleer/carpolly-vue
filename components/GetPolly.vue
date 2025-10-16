@@ -13,9 +13,27 @@
         </div>
       </div>
       <div v-else>
-      <div class="d-flex align-items-center mb-3">
-        <h1>{{ polly?.description }}</h1>
-        <div class="ms-3 d-flex gap-2">
+      <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center mb-3">
+        <div class="editable-title-container d-flex align-items-center" @mouseenter="showEditIcon = true" @mouseleave="showEditIcon = false">
+          <h1 v-if="!isEditingTitle" @click="startEditingTitle" class="editable-title">{{ polly?.description }}</h1>
+          <div v-else class="d-flex align-items-center">
+            <input
+              ref="titleInput"
+              v-model="editingTitle"
+              @keyup.enter="saveTitle"
+              @keyup.escape="cancelEditingTitle"
+              class="form-control form-control-lg me-2"
+              type="text"
+              maxlength="100"
+              required
+            />
+            <BButton @click="saveTitle" variant="success" size="sm" class="d-block d-md-none">
+              <i class="bi bi-check"></i>
+            </BButton>
+          </div>
+          <i v-if="!isEditingTitle && showEditIcon" class="bi bi-pencil edit-icon ms-2" title="Edit title"></i>
+        </div>
+        <div class="d-flex gap-2 mt-2 mt-md-0 ms-md-3">
           <BButton size="sm" variant="outline-primary" @click="shareOnWhatsApp" title="Share on WhatsApp">
             <i class="bi bi-whatsapp"></i>
           </BButton>
@@ -32,7 +50,7 @@
       </div>
       <div class="d-flex m-3">
         <h2>Drivers and spots available</h2>
-        <BButton class="ms-auto" @click="showModal = true">Add <span class="bi bi-car-front-fill"></span></BButton>
+        <BButton class="ms-auto" @click="addDriverModal?.show()">Add <span class="bi bi-car-front-fill"></span></BButton>
       </div>
       <BRow v-if="!polly?.drivers?.length">
         <BCol class="mb-3" md="6" offset-md="3">
@@ -89,7 +107,7 @@
       </div>
     </div>
 
-    <AddDriverModal v-model="showModal" :polly="polly" :id="id" @driver-added="onDriverAdded" />
+    <AddDriverModal ref="addDriverModal" :polly="polly" :id="id" @driver-added="onDriverAdded" />
 
     <BModal v-model="showRemoveModal" title="Confirm Removal" @ok="removeDriver">
       <p>Are you sure you want to remove this driver?</p>
@@ -100,7 +118,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, useTemplateRef } from 'vue'
 import { useRoute } from 'vue-router'
 import { BButton, BButtonGroup, BProgress, BModal, BCard, BCardBody, BCardFooter, BCardHeader, BCol, BRow, BListGroup, BListGroupItem } from 'bootstrap-vue-next'
 import AddDriverModal from './AddDriverModal.vue'
@@ -112,13 +130,17 @@ const route = useRoute()
 const id = ref(route.params.id as string)
 const polly = ref<Polly | null>(null)
 const isLoading = ref(true)
-const showModal = ref(false)
 const showRemoveModal = ref(false)
 const driverIndex = ref(-1)
 const showJoinModal = ref(false)
 const joinDriverIndex = ref(-1)
 const expandedItems = ref<Map<number, Set<number>>>(new Map())
 const unsubscribe = ref<(() => void) | null>(null)
+const isEditingTitle = ref(false)
+const editingTitle = ref('')
+const showEditIcon = ref(false)
+const titleInput = ref<HTMLInputElement | null>(null)
+const addDriverModal = useTemplateRef('addDriverModal')
 
 onMounted(() => {
   unsubscribe.value = dataService.subscribeToPolly(id.value, (data) => {
@@ -134,7 +156,7 @@ onUnmounted(() => {
 })
 
 const onDriverAdded = () => {
-  showModal.value = false
+  // Modal is now controlled by useTemplateRef, no need to set showModal
 }
 
 const confirmRemove = (index: number) => {
@@ -225,5 +247,108 @@ const onConsumerAdded = async (consumer: { name: string; comments: string }) => 
     }
   }
 }
+
+const startEditingTitle = () => {
+  isEditingTitle.value = true
+  editingTitle.value = polly.value?.description || ''
+  nextTick(() => {
+    titleInput.value?.focus()
+    titleInput.value?.select()
+  })
+}
+
+const cancelEditingTitle = () => {
+  isEditingTitle.value = false
+  editingTitle.value = ''
+}
+
+const saveTitle = async () => {
+  if (!editingTitle.value.trim()) {
+    return
+  }
+  try {
+    const title = editingTitle.value.trim();
+    await dataService.updatePolly(id.value, { description: title })
+    // Update locally for immediate UI feedback
+    if (polly.value) {
+      polly.value.description = title
+    }
+    isEditingTitle.value = false
+    editingTitle.value = ''
+  } catch (error) {
+    console.error('Error updating title:', error)
+  }
+}
 </script>
+<style>
+.car-card {
+  position: relative;
+  overflow: visible;
+}
+
+.editable-title {
+  cursor: pointer;
+  transition: opacity 0.2s;
+  display: inline-block;
+}
+
+.editable-title:hover {
+  opacity: 0.8;
+}
+
+.edit-icon {
+  color: #6c757d;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.edit-icon:hover {
+  color: #495057;
+}
+
+@media (min-width: 768px) {
+  .car-card.parrot-right::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: -60px;
+    transform: translateY(-50%);
+    width: 80px;
+    height: 80px;
+    background-image: url('/parrot.png');
+    background-size: cover;
+    background-position: center;
+  }
+
+  .car-card.parrot-left::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: -60px;
+    transform: translateY(-50%);
+    width: 80px;
+    height: 80px;
+    background-image: url('/parrot-left.png');
+    background-size: cover;
+    background-position: center;
+  }
+}
+@media (max-width: 768px) {
+.car-card::after {
+    content: '';
+    position: absolute;
+    bottom: -80px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 100px;
+    background-image: url('/parrot-below.png');
+    background-size: cover;
+    background-position: center;
+  }
+  .car-bcol {
+    margin-bottom: 35px;
+  }
+}
+</style>
 

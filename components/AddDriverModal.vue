@@ -1,5 +1,5 @@
 <template>
-  <BModal :model-value="modelValue" title="Add Driver" @ok="onSubmit($event)">
+  <BModal ref="modal" title="Add Driver" @ok="onSubmit($event)">
     <BForm>
       <BFormGroup label="Who will drive?" label-for="name">
         <BFormInput
@@ -43,7 +43,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps, defineEmits } from 'vue'
+import { ref, defineProps, defineEmits, useTemplateRef } from 'vue'
 import { BModal, BForm, BFormGroup, BFormInput } from 'bootstrap-vue-next'
 import type { BvTriggerableEvent } from 'bootstrap-vue-next'
 import { dataService } from '../services/dataService'
@@ -51,15 +51,15 @@ import type { Polly } from '../models/polly.model'
 import type { Driver } from '../models/driver.model'
 
 const props = defineProps<{
-  modelValue: boolean
   polly: Polly | null
   id: string
 }>()
 
 const emit = defineEmits<{
-  'update:modelValue': [value: boolean]
   'driver-added': []
 }>()
+
+const modal = useTemplateRef('modal')
 
 const name = ref('')
 const description = ref('')
@@ -89,14 +89,25 @@ const onSubmit = async (event: BvTriggerableEvent) => {
     const updatedDrivers = [...(props.polly.drivers || []), driver]
     try {
       await dataService.updatePolly(props.id, { drivers: updatedDrivers })
+      // Reset form fields
+      name.value = ''
+      description.value = ''
+      spots.value = 0
+      nameError.value = false
+      descriptionError.value = false
+      spotsError.value = false
       emit('driver-added')
-      emit('update:modelValue', false)
+      modal.value?.hide()
     } catch (error) {
       console.error('Error adding driver:', error)
       event.preventDefault()
     }
   }
 }
+
+defineExpose({
+  show: () => modal.value?.show()
+})
 </script>
 
 <style scoped></style>
