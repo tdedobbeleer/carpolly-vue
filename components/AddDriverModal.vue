@@ -15,7 +15,7 @@
         </div>
       </BFormGroup>
 
-      <BFormGroup label="Where do you want to meet? At what Time?" label-for="description">
+      <BFormGroup label="Where will you wait with your car? At what Time?" label-for="description">
         <BFormInput
           id="description"
           v-model="description"
@@ -67,7 +67,7 @@ const modal = useTemplateRef('modal')
 
 const name = ref('')
 const description = ref('')
-const spots = ref(0)
+const spots = ref(1)
 const nameError = ref('')
 const descriptionError = ref('')
 const spotsError = ref('')

@@ -54,7 +54,7 @@
       </div>
       <div class="d-flex m-3">
         <h2>Drivers and spots available</h2>
-        <BButton class="ms-auto" @click="addDriverModal?.show()">Add <span class="bi bi-car-front-fill"></span></BButton>
+        <BButton class="ms-auto" @click="addDriverModal?.show()">I'm a driver! <span class="bi bi-car-front-fill"></span></BButton>
       </div>
       <BRow v-if="!polly?.drivers?.length">
         <BCol class="mb-3" md="6" offset-md="3">
@@ -105,7 +105,7 @@
             </BCardBody>
             <BCardFooter>
               <BButtonGroup>
-                <BButton :disabled="!!(driver.consumers?.length && driver.consumers?.length === driver.spots)" @click="openJoinModal(index)">I wanna join!</BButton>
+                <BButton :disabled="!!(driver.consumers?.length && driver.consumers?.length === driver.spots)" @click="openJoinModal(index)">I wanna join this ride! <i class="bi bi-person-walking"></i></BButton>
               </BButtonGroup>
             </BCardFooter>
             <div class="d-grid mt-2">
