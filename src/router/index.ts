@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import CreatePolly from '../../components/CreatePolly.vue'
 import GetPolly from '../../components/GetPolly.vue'
 import FAQ from '../../components/FAQ.vue'
-import About from '../../components/About.vue'
+import AboutPage from '../../components/AboutPage.vue'
 
 const routes = [
   {
@@ -23,8 +23,8 @@ const routes = [
   },
   {
     path: '/about',
-    name: 'About',
-    component: About
+    name: 'AboutPage',
+    component: AboutPage
   }
 ]
 
