@@ -60,7 +60,6 @@
 .step {
   display: flex;
   align-items: center;
-  margin-bottom: 20px;
   padding: 20px;
   border: 2px solid #ddd;
   border-radius: 10px;
@@ -90,7 +89,6 @@
 .arrow {
   font-size: 3rem;
   color: #5b6875;
-  margin: 10px 0;
   display: flex;
   justify-content: center;
 }
