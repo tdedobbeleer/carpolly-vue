@@ -29,7 +29,7 @@ import { ref, defineProps, defineEmits } from 'vue'
 import { BModal, BForm, BFormGroup, BFormInput, BFormTextarea } from 'bootstrap-vue-next'
 import { BvTriggerableEvent } from 'bootstrap-vue-next'
 
-const props = defineProps<{
+defineProps<{
   modelValue: boolean
 }>()
 

@@ -36,7 +36,7 @@
       </div>
       <BRow v-if="!polly?.drivers?.length">
         <BCol class="mb-3" md="6" offset-md="3">
-          <BCard class="border-info shadow text-center no-drivers-card">
+          <BCard class="border-info shadow text-center parrot-card">
             <p>No drivers yet! Be a good parrot and offer a ride <i class="bi bi-emoji-smile-upside-down"></i></p>
           </BCard>
         </BCol>
@@ -227,76 +227,3 @@ const onConsumerAdded = async (consumer: { name: string; comments: string }) => 
 }
 </script>
 
-<style>
-.car-card {
-  position: relative;
-  overflow: visible;
-}
-
-.no-drivers-card {
-  position: relative;
-  overflow: visible;
-}
-
-.no-drivers-card::after {
-  content: '';
-  position: absolute;
-  bottom: -80px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100px;
-  height: 100px;
-  background-image: url('/parrot-below.png');
-  background-size: cover;
-  background-position: center;
-}
-
-@media (min-width: 768px) {
-  .car-card.parrot-right::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    right: -60px;
-    transform: translateY(-50%);
-    width: 80px;
-    height: 80px;
-    background-image: url('/parrot.png');
-    background-size: cover;
-    background-position: center;
-  }
-
-  .car-card.parrot-left::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: -60px;
-    transform: translateY(-50%);
-    width: 80px;
-    height: 80px;
-    background-image: url('/parrot-left.png');
-    background-size: cover;
-    background-position: center;
-  }
-
-  .no-drivers-card::after {
-    display: none;
-  }
-}
-@media (max-width: 768px) {
-.car-card::after {
-    content: '';
-    position: absolute;
-    bottom: -80px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100px;
-    height: 100px;
-    background-image: url('/parrot-below.png');
-    background-size: cover;
-    background-position: center;
-  }
-  .car-bcol {
-    margin-bottom: 35px;
-  }
-}
-</style>

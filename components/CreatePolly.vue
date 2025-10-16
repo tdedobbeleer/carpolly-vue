@@ -3,7 +3,8 @@
     <BCol md="6">
       <BCard bg-variant="light" class="parrot-card">
       <BForm @submit.prevent="onSubmit">
-        <BFormGroup label="Describe your Polly:" label-for="description">
+        <BFormGroup label="Describe your Polly" label-for="description">
+          <small>Just keep it simple, e.g. Ice skating 10/11/2025</small>
           <BFormInput
             id="description"
             v-model="description"

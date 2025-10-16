@@ -16,6 +16,9 @@
             Our mission is to make group transportation hassle-free, so you can focus on enjoying the event rather than
             worrying about logistics.
           </p>
+          <p>
+            And finally: if you're interested in parrots, especially the parrot in this site, please <a href="https://www.youtube.com/watch?v=4vuW6tQ0218" target="_blank">check this video on YouTube</a>. It will enlighten you.
+          </p>
         </BCard>
       </div>
     </div>
