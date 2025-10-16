@@ -11,6 +11,7 @@ import { BNavbar, BContainer, BApp, BNav, BNavItem, BNavbarBrand } from 'bootstr
           <h1 class="d-lg-none ms-2 text-decoration-underline">CarPolly</h1>
           <h1 class="text-decoration-underline position-absolute top-50 start-50 translate-middle d-none d-lg-block">CarPolly</h1>
           <BNav class="ms-auto">
+            <BNavItem to="/">Home</BNavItem>
             <BNavItem to="/faq">FAQ</BNavItem>
             <BNavItem to="/about">About</BNavItem>
           </BNav>
