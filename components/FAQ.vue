@@ -28,7 +28,7 @@
               <p>Let the parrots add themselves as driver or as passenger.</p>
               <ul>
                 <li><strong>As a driver:</strong> You can say where you'll be and how many spots you have in your car.</li>
-                <li><strong>As a passenger:</strong> You can add some comments like: "I'm very loud in the car, so bring headphones." or "I talk all the time, beware."</li>
+                <li><strong>As a passenger:</strong> You can add some comments like: "I talk all the time, beware."</li>
               </ul>
             </div>
           </div>
