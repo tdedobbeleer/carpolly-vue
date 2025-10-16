@@ -21,7 +21,14 @@ import { BNavbar, BContainer, BApp, BNav, BNavItem, BNavbarBrand } from 'bootstr
         </BContainer>
         <footer class="text-center mt-5 p-3">
             <p>Created by Tom De Dobbeleer with a bit of <i class="bi bi-heart"></i> from <a href="https://kilocode.ai" target="_blank">Kilo AI assistant</a>.</p>
-            <h2><a href="https://github.com/tomdedobbeleer/carpolly-vue" target="_blank"><i class="bi bi-github"></i></a></h2>
+            <div class="d-flex justify-content-center align-items-center gap-3">
+              <a href="https://github.com/tomdedobbeleer/carpolly-vue" target="_blank" rel="noopener noreferrer" title="View on GitHub">
+                <i class="bi bi-github fs-2"></i>
+              </a>
+              <a href="https://buymeacoffee.com/tdedobbeleer" target="_blank" rel="noopener noreferrer" title="Buy me a coffee">
+                <i class="bi bi-cup-hot-fill fs-2"></i>
+              </a>
+            </div>
         </footer>
   </BApp>
 </template>
