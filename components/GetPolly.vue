@@ -76,8 +76,9 @@
               <p>When & where?<br/>{{ driver.description }}</p>
               <BProgress
                 class="mb-3"
-                variant="info"
+                :variant="getProgressVariant(driver.consumers?.length || 0, driver.spots || 0)"
                 :value="countProgress(driver.consumers?.length || 0, driver.spots || 0)"/>
+              <p v-if="(driver.consumers?.length || 0) >= (driver.spots || 0)" class="text-danger mb-3">All spots are filled!</p>
             </BCardHeader>
             <BCardBody>
               <BListGroup v-if="driver.consumers?.length && driver.consumers?.length > 0">
@@ -193,6 +194,13 @@ const countProgress = (current: number, max: number) => {
     return (current / max) * 100
   }
 
+}
+
+const getProgressVariant = (current: number, max: number) => {
+  if (current >= max) {
+    return 'danger'
+  }
+  return 'info'
 }
 
 const openJoinModal = (index: number) => {
