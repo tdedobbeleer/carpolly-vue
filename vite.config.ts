@@ -22,7 +22,11 @@ export default defineConfig({
           vendor: ['vue', 'vue-router'],
           firebase: ['firebase/app', 'firebase/firestore'],
           ui: ['bootstrap-vue-next']
-        }
+        },
+        // Generate unique chunk names for better caching and security
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
       }
     }
   }

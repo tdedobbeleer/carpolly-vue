@@ -9,8 +9,9 @@
           type="text"
           maxlength="60"
           required
+          @input="resetNameError"
         />
-        <div class="invalid-feedback" v-if="nameError">Name is required and must be 60 characters or less.</div>
+        <div class="invalid-feedback" v-if="nameError">{{ nameError }}</div>
       </BFormGroup>
       <BFormGroup label="Comments (optional):" label-for="consumerComments">
         <BFormTextarea
@@ -28,6 +29,7 @@
 import { ref, defineProps, defineEmits } from 'vue'
 import { BModal, BForm, BFormGroup, BFormInput, BFormTextarea } from 'bootstrap-vue-next'
 import { BvTriggerableEvent } from 'bootstrap-vue-next'
+import { ValidationService } from '../services/validationService'
 
 defineProps<{
   modelValue: boolean
@@ -40,15 +42,29 @@ const emit = defineEmits<{
 
 const consumerName = ref('')
 const consumerComments = ref('')
-const nameError = ref(false)
+const nameError = ref('')
+
+const resetNameError = () => {
+  nameError.value = ''
+}
 
 const onSubmit = async (event: BvTriggerableEvent) => {
-  if (!consumerName.value.trim() || consumerName.value.length > 60) {
-    nameError.value = true
+  // Check rate limiting
+  if (!ValidationService.checkRateLimit('addConsumer', 10, 60000)) {
+    ValidationService.showRateLimitModal('add consumer', 10, 60000)
     event.preventDefault()
     return
   }
-  nameError.value = false
+
+  // Comprehensive validation
+  const validation = ValidationService.validateConsumerForm(consumerName.value, consumerComments.value)
+
+  nameError.value = validation.errors.name || ''
+
+  if (!validation.isValid) {
+    event.preventDefault()
+    return
+  }
 
   emit('consumer-added', {
     name: consumerName.value,

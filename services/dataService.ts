@@ -11,6 +11,7 @@ import {
   updateDoc
 } from 'firebase/firestore'
 import { db } from '../src/firebase'
+import { ValidationService } from './validationService'
 import type { Polly } from '../models/polly.model'
 import type { Driver } from '../models/driver.model'
 import type { Consumer } from '../models/consumer.model'
@@ -19,6 +20,21 @@ class DataService {
   private pollyCollection = 'pollies'
 
   async createPolly(id: string, polly: Polly) {
+    // Validate UUID format
+    const uuidValidation = ValidationService.validateUUID(id)
+    if (!uuidValidation.isValid) {
+      throw new Error('Invalid Polly ID format')
+    }
+
+    // Validate polly data
+    if (!polly.description) {
+      throw new Error('Polly description is required')
+    }
+    const descValidation = ValidationService.validatePollyDescription(polly.description)
+    if (!descValidation.isValid) {
+      throw new Error(descValidation.error)
+    }
+
     const docRef = doc(db, this.pollyCollection, id)
     const { drivers, ...pollyData } = polly
     const data = { ...pollyData, created: serverTimestamp() }
@@ -69,6 +85,20 @@ class DataService {
   }
 
   async createDriver(pollyId: string, driver: Driver) {
+    // Validate inputs
+    const uuidValidation = ValidationService.validateUUID(pollyId)
+    if (!uuidValidation.isValid) {
+      throw new Error('Invalid Polly ID format')
+    }
+
+    if (!driver.name || !driver.description || typeof driver.spots !== 'number') {
+      throw new Error('Driver name, description, and spots are required')
+    }
+    const driverValidation = ValidationService.validateDriverForm(driver.name, driver.description, driver.spots)
+    if (!driverValidation.isValid) {
+      throw new Error(Object.values(driverValidation.errors).join(', '))
+    }
+
     const pollyDocRef = doc(db, this.pollyCollection, pollyId)
     const driversCollection = collection(pollyDocRef, 'drivers')
     const { consumers, ...driverData } = driver
@@ -101,6 +131,20 @@ class DataService {
   }
 
   async createConsumer(pollyId: string, driverId: string, consumer: Consumer) {
+    // Validate inputs
+    const pollyUuidValidation = ValidationService.validateUUID(pollyId)
+    if (!pollyUuidValidation.isValid) {
+      throw new Error('Invalid Polly ID format')
+    }
+
+    if (!consumer.name) {
+      throw new Error('Consumer name is required')
+    }
+    const consumerValidation = ValidationService.validateConsumerForm(consumer.name, consumer.comments || '')
+    if (!consumerValidation.isValid) {
+      throw new Error(Object.values(consumerValidation.errors).join(', '))
+    }
+
     const pollyDocRef = doc(db, this.pollyCollection, pollyId)
     const driverDocRef = doc(collection(pollyDocRef, 'drivers'), driverId)
     const consumersCollection = collection(driverDocRef, 'consumers')

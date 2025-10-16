@@ -22,11 +22,15 @@
               v-model="editingTitle"
               @keyup.enter="saveTitle"
               @keyup.escape="cancelEditingTitle"
-              class="form-control form-control-lg me-2"
+              @input="resetTitleError"
+              :class="{ 'form-control': true, 'form-control-lg': true, 'me-2': true, 'is-invalid': titleError }"
               type="text"
-              maxlength="100"
+              maxlength="60"
               required
             />
+            <div v-if="titleError" class="invalid-feedback d-block">
+              {{ titleError }}
+            </div>
             <BButton @click="saveTitle" variant="success" size="sm" class="d-block d-md-none">
               <i class="bi bi-check"></i>
             </BButton>
@@ -130,6 +134,7 @@ import { BButton, BButtonGroup, BProgress, BModal, BCard, BCardBody, BCardFooter
 import AddDriverModal from './AddDriverModal.vue'
 import AddConsumerModal from './AddConsumerModal.vue'
 import { dataService } from '../services/dataService'
+import { ValidationService } from '../services/validationService'
 import type { Polly } from '../models/polly.model'
 
 const route = useRoute()
@@ -146,8 +151,13 @@ const isEditingTitle = ref(false)
 const editingTitle = ref('')
 const showEditIcon = ref(false)
 const titleInput = ref<HTMLInputElement | null>(null)
+const titleError = ref('')
 const addDriverModal = useTemplateRef('addDriverModal')
 const updatingDrivers = ref<Set<number>>(new Set())
+
+const resetTitleError = () => {
+  titleError.value = ''
+}
 
 onMounted(() => {
   unsubscribe.value = dataService.subscribeToPolly(id.value, (data) => {
@@ -283,9 +293,21 @@ const cancelEditingTitle = () => {
 }
 
 const saveTitle = async () => {
-  if (!editingTitle.value.trim()) {
+  // Check rate limiting
+  if (!ValidationService.checkRateLimit('updatePollyTitle', 5, 60000)) {
+    ValidationService.showRateLimitModal('update polly title', 5, 60000)
     return
   }
+
+  // Comprehensive validation
+  const validation = ValidationService.validatePollyDescription(editingTitle.value)
+
+  titleError.value = validation.error || ''
+
+  if (!validation.isValid) {
+    return
+  }
+
   try {
     const title = editingTitle.value.trim();
     await dataService.updatePolly(id.value, { description: title })

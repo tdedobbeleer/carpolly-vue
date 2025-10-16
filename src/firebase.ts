@@ -14,15 +14,19 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig)
 
-// Initialize App Check with reCAPTCHA v3
-// In production, use a proper reCAPTCHA site key
-initializeAppCheck(app, {
-  provider: new ReCaptchaV3Provider(import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'),
-  isTokenAutoRefreshEnabled: true
-})
-
 export const db = getFirestore(app)
 export const auth = getAuth(app)
+
+// Initialize App Check with reCAPTCHA v3
+// In development, use test key; in production, use proper reCAPTCHA site key
+if (location.hostname !== "localhost") {
+  // Only enable App Check in production to avoid issues with emulators
+  initializeAppCheck(app, {
+    provider: new ReCaptchaV3Provider(import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'),
+    isTokenAutoRefreshEnabled: true
+  })
+}
+
 if (location.hostname === "localhost") {
   connectFirestoreEmulator(db, "127.0.0.1", 8080);
   connectAuthEmulator(auth, "http://127.0.0.1:9099");

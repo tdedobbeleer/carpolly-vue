@@ -8,9 +8,10 @@
           :class="{ 'is-invalid': nameError }"
           type="text"
           maxlength="60"
+          @input="resetNameError"
         />
         <div v-if="nameError" class="invalid-feedback">
-          Name is required and must be 60 characters or less.
+          {{ nameError }}
         </div>
       </BFormGroup>
 
@@ -21,9 +22,10 @@
           :class="{ 'is-invalid': descriptionError }"
           type="text"
           maxlength="255"
+          @input="resetDescriptionError"
         />
         <div v-if="descriptionError" class="invalid-feedback">
-          Description is required and must be 255 characters or less.
+          {{ descriptionError }}
         </div>
       </BFormGroup>
 
@@ -33,9 +35,10 @@
           v-model.number="spots"
           :class="{ 'is-invalid': spotsError }"
           type="number"
+          @input="resetSpotsError"
         />
         <div v-if="spotsError" class="invalid-feedback">
-          Spots is required and must be at least 1.
+          {{ spotsError }}
         </div>
       </BFormGroup>
     </BForm>
@@ -47,6 +50,7 @@ import { ref, defineProps, defineEmits, useTemplateRef } from 'vue'
 import { BModal, BForm, BFormGroup, BFormInput } from 'bootstrap-vue-next'
 import type { BvTriggerableEvent } from 'bootstrap-vue-next'
 import { dataService } from '../services/dataService'
+import { ValidationService } from '../services/validationService'
 import type { Polly } from '../models/polly.model'
 import type { Driver } from '../models/driver.model'
 
@@ -64,16 +68,38 @@ const modal = useTemplateRef('modal')
 const name = ref('')
 const description = ref('')
 const spots = ref(0)
-const nameError = ref(false)
-const descriptionError = ref(false)
-const spotsError = ref(false)
+const nameError = ref('')
+const descriptionError = ref('')
+const spotsError = ref('')
+
+const resetNameError = () => {
+  nameError.value = ''
+}
+
+const resetDescriptionError = () => {
+  descriptionError.value = ''
+}
+
+const resetSpotsError = () => {
+  spotsError.value = ''
+}
 
 const onSubmit = async (event: BvTriggerableEvent) => {
-  nameError.value = !name.value.trim() || name.value.length > 60
-  descriptionError.value = !description.value.trim() || description.value.length > 255
-  spotsError.value = spots.value < 1
+  // Check rate limiting
+  if (!ValidationService.checkRateLimit('createDriver', 5, 60000)) {
+    ValidationService.showRateLimitModal('create driver', 5, 60000)
+    event.preventDefault()
+    return
+  }
 
-  if (nameError.value || descriptionError.value || spotsError.value) {
+  // Comprehensive validation
+  const validation = ValidationService.validateDriverForm(name.value, description.value, spots.value)
+
+  nameError.value = validation.errors.name || ''
+  descriptionError.value = validation.errors.description || ''
+  spotsError.value = validation.errors.spots || ''
+
+  if (!validation.isValid) {
     event.preventDefault()
     return
   }
@@ -91,9 +117,9 @@ const onSubmit = async (event: BvTriggerableEvent) => {
     name.value = ''
     description.value = ''
     spots.value = 0
-    nameError.value = false
-    descriptionError.value = false
-    spotsError.value = false
+    nameError.value = ''
+    descriptionError.value = ''
+    spotsError.value = ''
     emit('driver-added')
     modal.value?.hide()
   } catch (error) {
