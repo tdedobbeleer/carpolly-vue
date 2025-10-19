@@ -1,6 +1,7 @@
 <template>
   <BRow class="justify-content-md-center">
     <BCol md="6">
+      <h1>Let's get started!</h1>
       <BCard bg-variant="light" class="parrot-card">
       <BForm @submit.prevent="onSubmit">
         <BFormGroup label="Describe your Polly" label-for="description">
@@ -17,6 +18,9 @@
         </BFormGroup>
         <BButton class="mt-3" type="submit" variant="primary">Create a Carpolly!</BButton>
       </BForm>
+      <div class="mt-2">
+        <small><a href="/faq">What in parrots name is this?!</a></small>
+      </div>
       </BCard>
     </BCol>
   </BRow>

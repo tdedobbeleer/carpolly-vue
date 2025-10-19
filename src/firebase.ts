@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app'
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore'
 import { getAuth, connectAuthEmulator } from 'firebase/auth'
+import { getMessaging, isSupported } from 'firebase/messaging'
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check'
 
 const firebaseConfig = {
@@ -16,6 +17,21 @@ const app = initializeApp(firebaseConfig)
 
 export const db = getFirestore(app)
 export const auth = getAuth(app)
+
+// Initialize messaging only if supported (not in all browsers)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let messaging: any = null
+if (typeof window !== 'undefined') {
+  isSupported().then(supported => {
+    if (supported) {
+      messaging = getMessaging(app)
+    }
+  }).catch(() => {
+    // Silently fail if messaging is not supported
+  })
+}
+
+export { messaging }
 
 // Initialize App Check with reCAPTCHA v3
 // In development, use test key; in production, use proper reCAPTCHA site key

@@ -50,6 +50,15 @@
           <BButton size="sm" variant="outline-primary" @click="shareViaSMS" title="Share via SMS">
             <i class="bi bi-chat-dots"></i>
           </BButton>
+          <BButton
+            v-if="NotificationService.isPWA()"
+            size="sm"
+            :variant="NotificationService.isSubscribedToPolly(id) ? 'primary' : 'outline-primary'"
+            @click="showNotificationSettings"
+            title="Notification settings"
+          >
+            <i class="bi bi-bell"></i>
+          </BButton>
         </div>
       </div>
       <div class="d-flex m-3">
@@ -135,6 +144,7 @@ import AddDriverModal from './AddDriverModal.vue'
 import AddConsumerModal from './AddConsumerModal.vue'
 import { dataService } from '../services/dataService'
 import { ValidationService } from '../services/validationService'
+import { NotificationService } from '../services/notificationService'
 import type { Polly } from '../models/polly.model'
 
 const route = useRoute()
@@ -257,6 +267,12 @@ const shareOnSignal = () => {
   const url = window.location.href
   const text = `Check out this carpool: ${polly.value?.description || 'Carpool'} ${url}`
   window.open(`https://signal.me/?text=${encodeURIComponent(text)}`, '_blank')
+}
+
+const showNotificationSettings = () => {
+  if (polly.value?.description) {
+    NotificationService.showNotificationModal(id.value, polly.value.description)
+  }
 }
 
 const onConsumerAdded = async (consumer: { name: string; comments: string }) => {

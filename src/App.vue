@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { BNavbar, BContainer, BApp, BNav, BNavItem, BNavbarBrand } from 'bootstrap-vue-next'
+import { NotificationService } from '../services/notificationService'
+
+// Initialize notification service when app starts
+NotificationService.initializeListeners()
 </script>
 
 <template>
@@ -76,7 +80,7 @@ body {
   .parrot-card::after {
     content: '';
     position: absolute;
-    bottom: -80px;
+    bottom: -85px;
     left: 50%;
     transform: translateX(-50%);
     width: 100px;
