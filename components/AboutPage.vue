@@ -3,8 +3,8 @@
     <div class="container">
     <div class="row justify-content-md-center">
       <div class="col-md-6">
+        <h1 class="text-center mb-4">About CarPolly</h1>
         <BCard bg-variant="light" class="parrot-card">
-          <h1 class="text-center mb-4">About CarPolly</h1>
           <p class="lead">
             CarPolly is a fun and easy way to organize carpools for events. Whether you're planning a trip to the ice rink,
             a concert, or any group outing, Carpollies helps you coordinate rides with your friends and fellow "parrots".
