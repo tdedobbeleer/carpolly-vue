@@ -395,7 +395,7 @@ const saveTitle = async () => {
 .car-card::after {
     content: '';
     position: absolute;
-    bottom: -80px;
+    bottom: -85px;
     left: 50%;
     transform: translateX(-50%);
     width: 100px;
