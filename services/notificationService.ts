@@ -8,11 +8,13 @@ import { getToken, onMessage } from 'firebase/messaging'
 
 export class NotificationService {
   private static vapidKey = import.meta.env.VITE_FCM_VAPID_KEY
+  private static disabled = true
 
   /**
    * Check if notifications are supported in this browser
    */
   static isSupported(): boolean {
+    if (this.disabled) return false
     return 'Notification' in window &&
            'serviceWorker' in navigator &&
            messaging !== null
@@ -22,6 +24,7 @@ export class NotificationService {
    * Check if the app is running as a PWA
    */
   static isPWA(): boolean {
+    if (this.disabled) return false
     return window.matchMedia('(display-mode: standalone)').matches ||
            // eslint-disable-next-line @typescript-eslint/no-explicit-any
            ((window.navigator as any).standalone === true)
@@ -31,7 +34,7 @@ export class NotificationService {
    * Request notification permission from user
    */
   static async requestPermission(): Promise<NotificationPermission> {
-    if (!this.isSupported()) {
+    if (this.disabled || !this.isSupported()) {
       throw new Error('Notifications not supported in this browser')
     }
 
@@ -43,7 +46,7 @@ export class NotificationService {
    * Get FCM registration token
    */
   static async getFCMToken(): Promise<string | null> {
-    if (!this.isSupported()) {
+    if (this.disabled || !this.isSupported()) {
       return null
     }
 
@@ -62,7 +65,7 @@ export class NotificationService {
    * Initialize notification listeners
    */
   static initializeListeners(): void {
-    if (!this.isSupported()) {
+    if (this.disabled || !this.isSupported()) {
       return
     }
 
@@ -89,7 +92,7 @@ export class NotificationService {
    * Subscribe to notifications for a specific polly
    */
   static async subscribeToPolly(pollyId: string): Promise<boolean> {
-    if (!this.isPWA()) {
+    if (this.disabled || !this.isPWA()) {
       return false
     }
 
@@ -151,7 +154,7 @@ export class NotificationService {
    * Show notification settings modal
    */
   static showNotificationModal(pollyId: string, pollyDescription: string): void {
-    if (!this.isPWA()) {
+    if (this.disabled || !this.isPWA()) {
       return
     }
 

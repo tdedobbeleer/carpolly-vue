@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { BNavbar, BContainer, BApp, BNav, BNavItem, BNavbarBrand } from 'bootstrap-vue-next'
-import { NotificationService } from '../services/notificationService'
+// import { NotificationService } from '../services/notificationService'
 
 // Initialize notification service when app starts
-NotificationService.initializeListeners()
+// NotificationService.initializeListeners()
 </script>
 
 <template>
