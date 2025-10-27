@@ -1,8 +1,8 @@
 <template>
   <main class="about-page">
     <div class="container">
-    <div class="row justify-content-md-center">
-      <div class="col-md-6">
+    <BRow justify-content="md-center">
+      <BCol md="6">
         <h1 class="text-center mb-4">About CarPolly</h1>
         <BCard bg-variant="light" class="parrot-card">
           <p class="lead">
@@ -21,8 +21,8 @@
             And finally: if you're interested in parrots, especially the parrot in this site, please <a href="https://www.youtube.com/watch?v=4vuW6tQ0218" target="_blank" rel="noopener noreferrer">check this video on YouTube</a>. It will enlighten you.
           </p>
         </BCard>
-      </div>
-    </div>
+      </BCol>
+    </BRow>
   </div>
  </main>
 </template>
