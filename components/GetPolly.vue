@@ -1,5 +1,5 @@
 <template>
-  <BRow justify-content="md-center">
+  <BRow class="justify-content-md-center">
     <BCol md="8">
       <div v-if="isLoading" class="text-center my-5">
         <div class="spinner-border text-primary" role="status">
