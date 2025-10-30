@@ -1,6 +1,6 @@
 <template>
-  <div class="row justify-content-md-center">
-    <div class="col col-md-8">
+  <BRow class="justify-content-md-center">
+    <BCol md="8">
       <div v-if="isLoading" class="text-center my-5">
         <div class="spinner-border text-primary" role="status">
           <span class="visually-hidden">Loading...</span>
@@ -13,54 +13,63 @@
         </div>
       </div>
       <div v-else>
-      <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center mb-3">
-        <div class="editable-title-container d-flex align-items-center" @mouseenter="showEditIcon = true" @mouseleave="showEditIcon = false">
-          <h1 v-if="!isEditingTitle" @click="startEditingTitle" class="editable-title">{{ polly?.description }}</h1>
-          <div v-else class="d-flex align-items-center">
-            <input
-              ref="titleInput"
-              v-model="editingTitle"
-              @keyup.enter="saveTitle"
-              @keyup.escape="cancelEditingTitle"
-              @input="resetTitleError"
-              :class="{ 'form-control': true, 'form-control-lg': true, 'me-2': true, 'is-invalid': titleError }"
-              type="text"
-              maxlength="60"
-              required
-            />
-            <div v-if="titleError" class="invalid-feedback d-block">
-              {{ titleError }}
+      <BRow align-items="center" class="mb-2">
+        <BCol xs="6">
+          <div class="editable-title-container d-flex align-items-center" @mouseenter="showEditIcon = true" @mouseleave="showEditIcon = false">
+            <h1 v-if="!isEditingTitle" @click="startEditingTitle" class="editable-title">{{ polly?.description }}</h1>
+            <div v-else class="d-flex align-items-center">
+              <input
+                ref="titleInput"
+                v-model="editingTitle"
+                @keyup.enter="saveTitle"
+                @keyup.escape="cancelEditingTitle"
+                @input="resetTitleError"
+                :class="{ 'form-control': true, 'form-control-lg': true, 'me-2': true, 'is-invalid': titleError }"
+                type="text"
+                maxlength="60"
+                required
+              />
+              <div v-if="titleError" class="invalid-feedback d-block">
+                {{ titleError }}
+              </div>
+              <BButton @click="saveTitle" variant="success" size="sm" class="d-block d-md-none">
+                <i class="bi bi-check"></i>
+              </BButton>
             </div>
-            <BButton @click="saveTitle" variant="success" size="sm" class="d-block d-md-none">
-              <i class="bi bi-check"></i>
+            <i v-if="!isEditingTitle && showEditIcon" class="bi bi-pencil edit-icon ms-2" title="Edit title"></i>
+          </div>
+        </BCol>
+        </BRow>
+        <BRow>
+        <BCol xs="6">
+          <div class="d-flex gap-2">
+            <BButton size="sm" variant="outline-primary" @click="shareOnWhatsApp" title="Share on WhatsApp">
+              <i class="bi bi-whatsapp"></i>
+            </BButton>
+            <BButton size="sm" variant="outline-primary" @click="shareOnTelegram" title="Share on Telegram">
+              <i class="bi bi-telegram"></i>
+            </BButton>
+            <BButton size="sm" variant="outline-primary" @click="shareOnSignal" title="Share on Signal">
+              Signal
+            </BButton>
+            <BButton size="sm" variant="outline-primary" @click="shareViaSMS" title="Share via SMS">
+              <i class="bi bi-chat-dots"></i>
             </BButton>
           </div>
-          <i v-if="!isEditingTitle && showEditIcon" class="bi bi-pencil edit-icon ms-2" title="Edit title"></i>
-        </div>
-        <div class="d-flex gap-2 mt-2 mt-md-0 ms-md-3">
-          <BButton size="sm" variant="outline-primary" @click="shareOnWhatsApp" title="Share on WhatsApp">
-            <i class="bi bi-whatsapp"></i>
-          </BButton>
-          <BButton size="sm" variant="outline-primary" @click="shareOnTelegram" title="Share on Telegram">
-            <i class="bi bi-telegram"></i>
-          </BButton>
-          <BButton size="sm" variant="outline-primary" @click="shareOnSignal" title="Share on Signal">
-            Signal
-          </BButton>
-          <BButton size="sm" variant="outline-primary" @click="shareViaSMS" title="Share via SMS">
-            <i class="bi bi-chat-dots"></i>
-          </BButton>
+        </BCol>
+        <BCol xs="6" class="text-end">
           <BButton
-            v-if="NotificationService.isPWA()"
+            v-if="NotificationService.isSupported()"
             size="sm"
             :variant="NotificationService.isSubscribedToPolly(id) ? 'primary' : 'outline-primary'"
             @click="showNotificationSettings"
             title="Notification settings"
           >
-            <i class="bi bi-bell"></i>
+            <i class="bi bi-bell-fill" v-if="NotificationService.isSubscribedToPolly(id)"></i>
+            <i class="bi bi-bell" v-else></i>
           </BButton>
-        </div>
-      </div>
+        </BCol>
+      </BRow>
       <div class="d-flex m-3">
         <h2>Drivers and spots available</h2>
         <BButton class="ms-auto" @click="addDriverModal?.show()">I'm a driver! <span class="bi bi-car-front-fill"></span></BButton>
@@ -115,6 +124,16 @@
             <BCardFooter>
               <BButtonGroup>
                 <BButton :disabled="!!(driver.consumers?.length && driver.consumers?.length === driver.spots)" @click="openJoinModal(index)">I wanna join this ride! <i class="bi bi-person-walking"></i></BButton>
+                <BButton
+                  v-if="NotificationService.isSupported() && driver.id"
+                  size="sm"
+                  :variant="NotificationService.isSubscribedToDriverPassengers(driver.id) ? 'primary' : 'outline-primary'"
+                  @click="showDriverNotificationSettings(driver.id!, driver.name)"
+                  title="Driver notification settings"
+                >
+                  <i class="bi bi-bell-fill" v-if="NotificationService.isSubscribedToDriverPassengers(driver.id)"></i>
+                  <i class="bi bi-bell" v-else></i>
+                </BButton>
               </BButtonGroup>
             </BCardFooter>
             <div class="d-grid mt-2">
@@ -124,7 +143,7 @@
         </BCol>
       </BRow>
       </div>
-    </div>
+    </BCol>
 
     <AddDriverModal ref="addDriverModal" :polly="polly" :id="id" @driver-added="onDriverAdded" />
 
@@ -133,7 +152,17 @@
     </BModal>
 
     <AddConsumerModal v-model="showJoinModal" @consumer-added="onConsumerAdded" />
-  </div>
+
+    <NotificationSettingsModal
+      v-model="showNotificationModal"
+      :modal-type="notificationModalType"
+      :polly-id="notificationModalType === 'polly' ? id : undefined"
+      :polly-description="notificationModalType === 'polly' ? polly?.description : undefined"
+      :driver-id="notificationModalType === 'driver' ? currentDriverId : undefined"
+      :driver-name="notificationModalType === 'driver' ? currentDriverName : undefined"
+      @saved="onNotificationSaved"
+    />
+  </BRow>
 </template>
 
 <script setup lang="ts">
@@ -142,6 +171,7 @@ import { useRoute } from 'vue-router'
 import { BButton, BButtonGroup, BProgress, BModal, BCard, BCardBody, BCardFooter, BCardHeader, BCol, BRow, BListGroup, BListGroupItem } from 'bootstrap-vue-next'
 import AddDriverModal from './AddDriverModal.vue'
 import AddConsumerModal from './AddConsumerModal.vue'
+import NotificationSettingsModal from './NotificationSettingsModal.vue'
 import { dataService } from '../services/dataService'
 import { ValidationService } from '../services/validationService'
 import { NotificationService } from '../services/notificationService'
@@ -164,6 +194,10 @@ const titleInput = ref<HTMLInputElement | null>(null)
 const titleError = ref('')
 const addDriverModal = useTemplateRef('addDriverModal')
 const updatingDrivers = ref<Set<number>>(new Set())
+const showNotificationModal = ref(false)
+const notificationModalType = ref<'polly' | 'driver'>('polly')
+const currentDriverId = ref('')
+const currentDriverName = ref('')
 
 const resetTitleError = () => {
   titleError.value = ''
@@ -271,8 +305,20 @@ const shareOnSignal = () => {
 
 const showNotificationSettings = () => {
   if (polly.value?.description) {
-    NotificationService.showNotificationModal(id.value, polly.value.description)
+    notificationModalType.value = 'polly'
+    showNotificationModal.value = true
   }
+}
+
+const showDriverNotificationSettings = (driverId: string, driverName: string | undefined) => {
+  notificationModalType.value = 'driver'
+  currentDriverId.value = driverId
+  currentDriverName.value = driverName || 'Unknown Driver'
+  showNotificationModal.value = true
+}
+
+const onNotificationSaved = () => {
+  // Modal will close automatically
 }
 
 const onConsumerAdded = async (consumer: { name: string; comments: string }) => {

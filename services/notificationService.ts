@@ -8,7 +8,7 @@ import { getToken, onMessage } from 'firebase/messaging'
 
 export class NotificationService {
   private static vapidKey = import.meta.env.VITE_FCM_VAPID_KEY
-  private static disabled = true
+  private static disabled = false
 
   /**
    * Check if notifications are supported in this browser
@@ -89,54 +89,104 @@ export class NotificationService {
   }
 
   /**
-   * Subscribe to notifications for a specific polly
-   */
-  static async subscribeToPolly(pollyId: string): Promise<boolean> {
-    if (this.disabled || !this.isPWA()) {
-      return false
-    }
+    * Subscribe to notifications for a specific polly
+    */
+   static async subscribeToPolly(pollyId: string): Promise<boolean> {
+     if (this.disabled || !this.isSupported()) {
+       return false
+     }
 
-    try {
-      const permission = await this.requestPermission()
-      if (permission !== 'granted') {
+     try {
+       const permission = await this.requestPermission()
+       if (permission !== 'granted') {
+         return false
+       }
+
+       const token = await this.getFCMToken()
+       if (!token) {
+         return false
+       }
+
+       // Store subscription preference locally
+       const subscriptions = this.getSubscriptions()
+       subscriptions[pollyId] = { token, subscribed: true, timestamp: Date.now() }
+       localStorage.setItem('carpolly_notifications', JSON.stringify(subscriptions))
+
+       return true
+     } catch (error) {
+       console.error('Error subscribing to polly notifications:', error)
+       return false
+     }
+   }
+
+   /**
+     * Subscribe to notifications for driver passenger changes
+     */
+    static async subscribeToDriverPassengers(driverId: string): Promise<boolean> {
+      if (this.disabled || !this.isSupported()) {
         return false
       }
 
-      const token = await this.getFCMToken()
-      if (!token) {
-        return false
-      }
+     try {
+       const permission = await this.requestPermission()
+       if (permission !== 'granted') {
+         return false
+       }
 
-      // Store subscription preference locally
-      const subscriptions = this.getSubscriptions()
-      subscriptions[pollyId] = { token, subscribed: true, timestamp: Date.now() }
-      localStorage.setItem('carpolly_notifications', JSON.stringify(subscriptions))
+       const token = await this.getFCMToken()
+       if (!token) {
+         return false
+       }
 
-      return true
-    } catch (error) {
-      console.error('Error subscribing to polly notifications:', error)
-      return false
-    }
-  }
+       // Store subscription preference locally
+       const subscriptions = this.getSubscriptions()
+       subscriptions[`driver_${driverId}`] = { token, subscribed: true, timestamp: Date.now() }
+       localStorage.setItem('carpolly_notifications', JSON.stringify(subscriptions))
 
-  /**
-   * Unsubscribe from notifications for a specific polly
-   */
-  static unsubscribeFromPolly(pollyId: string): void {
-    const subscriptions = this.getSubscriptions()
-    if (subscriptions[pollyId]) {
-      delete subscriptions[pollyId]
-      localStorage.setItem('carpolly_notifications', JSON.stringify(subscriptions))
-    }
-  }
+       return true
+     } catch (error) {
+       console.error('Error subscribing to driver passenger notifications:', error)
+       return false
+     }
+   }
 
   /**
-   * Check if user is subscribed to a specific polly
-   */
-  static isSubscribedToPolly(pollyId: string): boolean {
-    const subscriptions = this.getSubscriptions()
-    return subscriptions[pollyId]?.subscribed === true
-  }
+    * Unsubscribe from notifications for a specific polly
+    */
+   static unsubscribeFromPolly(pollyId: string): void {
+     const subscriptions = this.getSubscriptions()
+     if (subscriptions[pollyId]) {
+       delete subscriptions[pollyId]
+       localStorage.setItem('carpolly_notifications', JSON.stringify(subscriptions))
+     }
+   }
+
+   /**
+    * Unsubscribe from notifications for driver passenger changes
+    */
+   static unsubscribeFromDriverPassengers(driverId: string): void {
+     const subscriptions = this.getSubscriptions()
+     if (subscriptions[`driver_${driverId}`]) {
+       delete subscriptions[`driver_${driverId}`]
+       localStorage.setItem('carpolly_notifications', JSON.stringify(subscriptions))
+     }
+   }
+
+  /**
+    * Check if user is subscribed to a specific polly
+    */
+   static isSubscribedToPolly(pollyId: string): boolean {
+     const subscriptions = this.getSubscriptions()
+     return subscriptions[pollyId]?.subscribed === true
+   }
+
+   /**
+    * Check if user is subscribed to driver passenger changes
+    */
+   static isSubscribedToDriverPassengers(driverId: string): boolean {
+     const subscriptions = this.getSubscriptions()
+     return subscriptions[`driver_${driverId}`]?.subscribed === true
+   }
 
   /**
    * Get all notification subscriptions
@@ -150,81 +200,4 @@ export class NotificationService {
     }
   }
 
-  /**
-   * Show notification settings modal
-   */
-  static showNotificationModal(pollyId: string, pollyDescription: string): void {
-    if (this.disabled || !this.isPWA()) {
-      return
-    }
-
-    const isSubscribed = this.isSubscribedToPolly(pollyId)
-
-    // Create modal content
-    const modalContent = `
-      <div class="text-center">
-        <i class="bi bi-bell${isSubscribed ? '-fill' : ''} text-primary fs-1 mb-3"></i>
-        <h5>Push Notifications</h5>
-        <p>Get notified when drivers or passengers join "${pollyDescription}"</p>
-        <div class="form-check form-switch mb-3">
-          <input class="form-check-input" type="checkbox" id="notification-toggle" ${isSubscribed ? 'checked' : ''}>
-          <label class="form-check-label" for="notification-toggle">
-            Enable notifications for this polly
-          </label>
-        </div>
-      </div>
-    `
-
-    // Create and show modal
-    const modal = document.createElement('div')
-    modal.innerHTML = `
-      <div class="modal fade" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-          <div class="modal-content">
-            <div class="modal-body p-4">
-              ${modalContent}
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-              <button type="button" class="btn btn-primary" id="save-notification-settings">Save</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    `
-
-    document.body.appendChild(modal)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const bsModal = new (window as any).bootstrap.Modal(modal.querySelector('.modal')!)
-    bsModal.show()
-
-    // Handle save button
-    const saveButton = modal.querySelector('#save-notification-settings') as HTMLButtonElement
-    const toggle = modal.querySelector('#notification-toggle') as HTMLInputElement
-
-    saveButton.addEventListener('click', async () => {
-      try {
-        if (toggle.checked) {
-          const success = await this.subscribeToPolly(pollyId)
-          if (success) {
-            alert('Notifications enabled! You\'ll be notified of changes to this polly.')
-          } else {
-            alert('Failed to enable notifications. Please check your browser settings.')
-          }
-        } else {
-          this.unsubscribeFromPolly(pollyId)
-          alert('Notifications disabled for this polly.')
-        }
-        bsModal.hide()
-      } catch (error) {
-        console.error('Error saving notification settings:', error)
-        alert('Error saving notification settings.')
-      }
-    })
-
-    // Clean up modal after it's hidden
-    modal.addEventListener('hidden.bs.modal', () => {
-      document.body.removeChild(modal)
-    })
-  }
 }
