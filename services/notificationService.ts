@@ -5,6 +5,7 @@
 
 export class NotificationService {
   private static disabled = false
+  private static subscriptionChangeCallbacks: (() => void)[] = []
 
   /**
    * Check if notifications are supported in this browser
@@ -48,6 +49,9 @@ export class NotificationService {
        // Notify service worker of preference change
        this.notifyServiceWorker()
 
+       // Notify subscribers of change
+       this.notifySubscriptionChange()
+
        return true
      } catch (error) {
        console.error('Error subscribing to polly notifications:', error)
@@ -77,6 +81,9 @@ export class NotificationService {
         // Notify service worker of preference change
         this.notifyServiceWorker()
 
+        // Notify subscribers of change
+        this.notifySubscriptionChange()
+
         return true
       } catch (error) {
         console.error('Error subscribing to driver passenger notifications:', error)
@@ -94,6 +101,8 @@ export class NotificationService {
        localStorage.setItem('carpolly_notifications', JSON.stringify(subscriptions))
        // Notify service worker of preference change
        this.notifyServiceWorker()
+       // Notify subscribers of change
+       this.notifySubscriptionChange()
      }
    }
 
@@ -107,6 +116,8 @@ export class NotificationService {
        localStorage.setItem('carpolly_notifications', JSON.stringify(subscriptions))
        // Notify service worker of preference change
        this.notifyServiceWorker()
+       // Notify subscribers of change
+       this.notifySubscriptionChange()
      }
    }
 
@@ -147,6 +158,26 @@ export class NotificationService {
         type: 'UPDATE_NOTIFICATION_PREFERENCES'
       })
     }
+  }
+
+  /**
+   * Subscribe to subscription changes
+   */
+  static onSubscriptionChange(callback: () => void): () => void {
+    this.subscriptionChangeCallbacks.push(callback)
+    return () => {
+      const index = this.subscriptionChangeCallbacks.indexOf(callback)
+      if (index > -1) {
+        this.subscriptionChangeCallbacks.splice(index, 1)
+      }
+    }
+  }
+
+  /**
+   * Notify all subscribers of subscription changes
+   */
+  private static notifySubscriptionChange(): void {
+    this.subscriptionChangeCallbacks.forEach(callback => callback())
   }
 
 }
