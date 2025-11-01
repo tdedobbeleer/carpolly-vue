@@ -111,9 +111,14 @@
               <BListGroup v-if="driver.consumers?.length && driver.consumers?.length > 0">
                 <BListGroupItem v-for="(consumer, consumerIndex) in driver.consumers" :key="consumerIndex" button>
                   {{ consumer.name }}
-                  <BButton v-if="consumer.comments" class="btn-sm float-end" @click="toggleExpanded(index, consumerIndex)">
-                    <i class="bi bi-chat-left-text"></i>
-                  </BButton>
+                  <div class="float-end">
+                    <BButton v-if="consumer.comments" class="btn-sm me-1" @click="toggleExpanded(index, consumerIndex)">
+                      <i class="bi bi-chat-left-text"></i>
+                    </BButton>
+                    <BButton class="btn-sm" variant="outline-danger" @click="confirmRemoveConsumer(index, consumerIndex)">
+                      <i class="bi bi-trash3"></i>
+                    </BButton>
+                  </div>
                   <div v-if="expandedItems.get(index)?.has(consumerIndex) && consumer.comments" class="mt-2">
                     <i>{{ consumer.comments }}</i>
                   </div>
@@ -151,6 +156,10 @@
       <p>Are you sure you want to remove this driver?</p>
     </BModal>
 
+    <BModal v-model="showRemoveConsumerModal" title="Confirm Removal" @ok="removeConsumer">
+      <p>Are you sure you want to remove this passenger?</p>
+    </BModal>
+
     <AddConsumerModal v-model="showJoinModal" @consumer-added="onConsumerAdded" />
 
     <NotificationSettingsModal
@@ -183,6 +192,8 @@ const polly = ref<Polly | null>(null)
 const isLoading = ref(true)
 const showRemoveModal = ref(false)
 const driverIndex = ref(-1)
+const showRemoveConsumerModal = ref(false)
+const consumerIndex = ref(-1)
 const showJoinModal = ref(false)
 const joinDriverIndex = ref(-1)
 const expandedItems = ref<Map<number, Set<number>>>(new Map())
@@ -225,6 +236,12 @@ const confirmRemove = (index: number) => {
   showRemoveModal.value = true
 }
 
+const confirmRemoveConsumer = (driverIdx: number, consIdx: number) => {
+  driverIndex.value = driverIdx
+  consumerIndex.value = consIdx
+  showRemoveConsumerModal.value = true
+}
+
 const removeDriver = async () => {
   if (polly.value && driverIndex.value >= 0 && polly.value.drivers) {
     const driverToRemove = polly.value.drivers[driverIndex.value]
@@ -234,6 +251,23 @@ const removeDriver = async () => {
         showRemoveModal.value = false
       } catch (error) {
         console.error('Error removing driver:', error)
+      }
+    }
+  }
+}
+
+const removeConsumer = async () => {
+  if (polly.value && driverIndex.value >= 0 && consumerIndex.value >= 0 && polly.value.drivers) {
+    const driver = polly.value.drivers[driverIndex.value]
+    if (driver && driver.consumers && driver.consumers[consumerIndex.value] && driver.id) {
+      const consumerToRemove = driver.consumers[consumerIndex.value]
+      if (consumerToRemove && consumerToRemove.id) {
+        try {
+          await dataService.deleteConsumer(id.value, driver.id, consumerToRemove.id)
+          showRemoveConsumerModal.value = false
+        } catch (error) {
+          console.error('Error removing consumer:', error)
+        }
       }
     }
   }

@@ -8,7 +8,7 @@ import { getToken, onMessage } from 'firebase/messaging'
 
 export class NotificationService {
   private static vapidKey = import.meta.env.VITE_FCM_VAPID_KEY
-  private static disabled = false
+  private static disabled = true
 
   /**
    * Check if notifications are supported in this browser
