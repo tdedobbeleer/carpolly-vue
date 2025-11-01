@@ -35,7 +35,7 @@ export { messaging }
 
 // Initialize App Check with reCAPTCHA v3
 // In development, use test key; in production, use proper reCAPTCHA site key
-if (location.hostname !== "localhost") {
+if (location.hostname !== "localhost" && location.hostname !== "10.0.2.2") {
   // Only enable App Check in production to avoid issues with emulators
   initializeAppCheck(app, {
     provider: new ReCaptchaV3Provider(import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'),
@@ -43,7 +43,7 @@ if (location.hostname !== "localhost") {
   })
 }
 
-if (location.hostname === "localhost") {
-  connectFirestoreEmulator(db, "127.0.0.1", 8080);
-  connectAuthEmulator(auth, "http://127.0.0.1:9099");
+if (location.hostname === "localhost" || location.hostname === "10.0.2.2") {
+  connectFirestoreEmulator(db, location.hostname === "localhost" ? "127.0.0.1" : "10.0.2.2", 8080);
+  connectAuthEmulator(auth, location.hostname === "localhost" ? "http://127.0.0.1:9099" : "http://10.0.2.2:9099");
 }

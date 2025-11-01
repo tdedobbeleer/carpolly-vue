@@ -1,13 +1,9 @@
 /**
- * Notification service for PWA push notifications
- * Handles Firebase Cloud Messaging and notification permissions
+ * Notification service for Firestore-based notifications
+ * Handles notification permissions and service worker communication
  */
 
-import { messaging } from '../src/firebase'
-import { getToken, onMessage } from 'firebase/messaging'
-
 export class NotificationService {
-  private static vapidKey = import.meta.env.VITE_FCM_VAPID_KEY
   private static disabled = false
 
   /**
@@ -15,19 +11,7 @@ export class NotificationService {
    */
   static isSupported(): boolean {
     if (this.disabled) return false
-    return 'Notification' in window &&
-           'serviceWorker' in navigator &&
-           messaging !== null
-  }
-
-  /**
-   * Check if the app is running as a PWA
-   */
-  static isPWA(): boolean {
-    if (this.disabled) return false
-    return window.matchMedia('(display-mode: standalone)').matches ||
-           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-           ((window.navigator as any).standalone === true)
+    return 'Notification' in window && 'serviceWorker' in navigator
   }
 
   /**
@@ -40,52 +24,6 @@ export class NotificationService {
 
     const permission = await Notification.requestPermission()
     return permission
-  }
-
-  /**
-   * Get FCM registration token
-   */
-  static async getFCMToken(): Promise<string | null> {
-    if (this.disabled || !this.isSupported()) {
-      return null
-    }
-
-    try {
-      const token = await getToken(messaging!, {
-        vapidKey: this.vapidKey
-      })
-      return token
-    } catch (error) {
-      console.error('Error getting FCM token:', error)
-      return null
-    }
-  }
-
-  /**
-   * Initialize notification listeners
-   */
-  static initializeListeners(): void {
-    if (this.disabled || !this.isSupported()) {
-      return
-    }
-
-    // Listen for foreground messages
-    onMessage(messaging!, (payload) => {
-      console.log('Message received in foreground:', payload)
-
-      // Show notification if permission granted
-      if (Notification.permission === 'granted') {
-        const { title, body, icon } = payload.notification || {}
-        if (title && body) {
-          new Notification(title, {
-            body,
-            icon: icon || '/logo.png',
-            badge: '/favicon-96x96.png',
-            tag: payload.data?.tag || 'carpolly-notification'
-          })
-        }
-      }
-    })
   }
 
   /**
@@ -102,15 +40,13 @@ export class NotificationService {
          return false
        }
 
-       const token = await this.getFCMToken()
-       if (!token) {
-         return false
-       }
-
        // Store subscription preference locally
        const subscriptions = this.getSubscriptions()
-       subscriptions[pollyId] = { token, subscribed: true, timestamp: Date.now() }
+       subscriptions[pollyId] = { subscribed: true, timestamp: Date.now() }
        localStorage.setItem('carpolly_notifications', JSON.stringify(subscriptions))
+
+       // Notify service worker of preference change
+       this.notifyServiceWorker()
 
        return true
      } catch (error) {
@@ -127,28 +63,26 @@ export class NotificationService {
         return false
       }
 
-     try {
-       const permission = await this.requestPermission()
-       if (permission !== 'granted') {
-         return false
-       }
+      try {
+        const permission = await this.requestPermission()
+        if (permission !== 'granted') {
+          return false
+        }
 
-       const token = await this.getFCMToken()
-       if (!token) {
-         return false
-       }
+        // Store subscription preference locally
+        const subscriptions = this.getSubscriptions()
+        subscriptions[`driver_${driverId}`] = { subscribed: true, timestamp: Date.now() }
+        localStorage.setItem('carpolly_notifications', JSON.stringify(subscriptions))
 
-       // Store subscription preference locally
-       const subscriptions = this.getSubscriptions()
-       subscriptions[`driver_${driverId}`] = { token, subscribed: true, timestamp: Date.now() }
-       localStorage.setItem('carpolly_notifications', JSON.stringify(subscriptions))
+        // Notify service worker of preference change
+        this.notifyServiceWorker()
 
-       return true
-     } catch (error) {
-       console.error('Error subscribing to driver passenger notifications:', error)
-       return false
-     }
-   }
+        return true
+      } catch (error) {
+        console.error('Error subscribing to driver passenger notifications:', error)
+        return false
+      }
+    }
 
   /**
     * Unsubscribe from notifications for a specific polly
@@ -158,6 +92,8 @@ export class NotificationService {
      if (subscriptions[pollyId]) {
        delete subscriptions[pollyId]
        localStorage.setItem('carpolly_notifications', JSON.stringify(subscriptions))
+       // Notify service worker of preference change
+       this.notifyServiceWorker()
      }
    }
 
@@ -169,6 +105,8 @@ export class NotificationService {
      if (subscriptions[`driver_${driverId}`]) {
        delete subscriptions[`driver_${driverId}`]
        localStorage.setItem('carpolly_notifications', JSON.stringify(subscriptions))
+       // Notify service worker of preference change
+       this.notifyServiceWorker()
      }
    }
 
@@ -189,14 +127,25 @@ export class NotificationService {
    }
 
   /**
-   * Get all notification subscriptions
+    * Get all notification subscriptions
+    */
+   private static getSubscriptions(): Record<string, { subscribed: boolean; timestamp: number }> {
+     try {
+       const stored = localStorage.getItem('carpolly_notifications')
+       return stored ? JSON.parse(stored) : {}
+     } catch {
+       return {}
+     }
+   }
+
+  /**
+   * Notify service worker of preference changes
    */
-  private static getSubscriptions(): Record<string, { token: string; subscribed: boolean; timestamp: number }> {
-    try {
-      const stored = localStorage.getItem('carpolly_notifications')
-      return stored ? JSON.parse(stored) : {}
-    } catch {
-      return {}
+  private static notifyServiceWorker(): void {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'UPDATE_NOTIFICATION_PREFERENCES'
+      })
     }
   }
 
