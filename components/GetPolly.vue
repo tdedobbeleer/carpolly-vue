@@ -61,11 +61,11 @@
           <BButton
             v-if="NotificationService.isSupported()"
             size="sm"
-            :variant="NotificationService.isSubscribedToPolly(id) ? 'primary' : 'outline-primary'"
+            :variant="isSubscribedToPolly ? 'primary' : 'outline-primary'"
             @click="showNotificationSettings"
             title="Notification settings"
           >
-            <i class="bi bi-bell-fill" v-if="NotificationService.isSubscribedToPolly(id)"></i>
+            <i class="bi bi-bell-fill" v-if="isSubscribedToPolly"></i>
             <i class="bi bi-bell" v-else></i>
           </BButton>
         </BCol>
@@ -127,11 +127,11 @@
                 <BButton
                   v-if="NotificationService.isSupported() && driver.id"
                   size="sm"
-                  :variant="NotificationService.isSubscribedToDriverPassengers(driver.id) ? 'primary' : 'outline-primary'"
+                  :variant="isSubscribedToDriverPassengers(driver.id).value ? 'primary' : 'outline-primary'"
                   @click="showDriverNotificationSettings(driver.id!, driver.name)"
                   title="Driver notification settings"
                 >
-                  <i class="bi bi-bell-fill" v-if="NotificationService.isSubscribedToDriverPassengers(driver.id)"></i>
+                  <i class="bi bi-bell-fill" v-if="isSubscribedToDriverPassengers(driver.id).value"></i>
                   <i class="bi bi-bell" v-else></i>
                 </BButton>
               </BButtonGroup>
@@ -166,7 +166,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick, useTemplateRef } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, useTemplateRef, computed, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 import { BButton, BButtonGroup, BProgress, BModal, BCard, BCardBody, BCardFooter, BCardHeader, BCol, BRow, BListGroup, BListGroupItem } from 'bootstrap-vue-next'
 import AddDriverModal from './AddDriverModal.vue'
@@ -199,6 +199,23 @@ const notificationModalType = ref<'polly' | 'driver'>('polly')
 const currentDriverId = ref('')
 const currentDriverName = ref('')
 
+// Reactive notification states
+const notificationState = ref(0)
+
+// Computed properties for reactive notification states
+const isSubscribedToPolly = computed(() => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+  notificationState.value // trigger reactivity
+  return NotificationService.isSubscribedToPolly(id.value)
+})
+const isSubscribedToDriverPassengers = (driverId: string) => {
+  return computed(() => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    notificationState.value // trigger reactivity
+    return NotificationService.isSubscribedToDriverPassengers(driverId)
+  })
+}
+
 const resetTitleError = () => {
   titleError.value = ''
 }
@@ -208,6 +225,18 @@ onMounted(() => {
     polly.value = data
     isLoading.value = false
   })
+
+  // Subscribe to notification changes
+  const unsubscribeNotifications = NotificationService.onSubscriptionChange(() => {
+    notificationState.value++
+  })
+
+  // Cleanup function for notifications
+  const originalUnsubscribe = unsubscribe.value
+  unsubscribe.value = () => {
+    originalUnsubscribe?.()
+    unsubscribeNotifications()
+  }
 })
 
 onUnmounted(() => {
