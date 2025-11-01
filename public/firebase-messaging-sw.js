@@ -1,13 +1,14 @@
 importScripts('https://www.gstatic.com/firebasejs/12.3.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore-compat.js');
+importScripts('https://unpkg.com/localforage@1.10.0/dist/localforage.min.js');
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBDOU99-h67HcA6JeFXHbSNMu7e2yNNu3RzoMj8TM4W88jITfq7ZmPvIM1Iv-4_l2LxQcYwhqby2xGpWwzjfAnG4",
+  apiKey: "AIzaSyC4yG_GAL-aYJ-OVqC-yDssMfyDGoWdaUQ",
   authDomain: "carpolly.firebaseapp.com",
-  projectId: "carpolly",
+  projectId: "carpolly-4fe11",
   storageBucket: "carpolly.appspot.com",
   messagingSenderId: "123456789012",
-  appId: "1:123456789012:web:abcdef123456"
+  appId: "1:611172017575:web:f0b52a8ace683ec19f8282"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -17,11 +18,11 @@ const db = firebase.firestore();
 // Store active listeners to avoid duplicates
 const activeListeners = new Map();
 
-// Function to get notification preferences from localStorage
-function getNotificationPreferences() {
+// Function to get notification preferences from localForage
+async function getNotificationPreferences() {
   try {
-    const stored = localStorage.getItem('carpolly_notifications');
-    return stored ? JSON.parse(stored) : {};
+    const stored = await localforage.getItem('carpolly_notifications');
+    return stored || {};
   } catch (error) {
     console.error('Error reading notification preferences:', error);
     return {};
@@ -29,8 +30,8 @@ function getNotificationPreferences() {
 }
 
 // Function to check if we should notify for a polly
-function shouldNotifyForPolly(pollyId) {
-  const preferences = getNotificationPreferences();
+async function shouldNotifyForPolly(pollyId) {
+  const preferences = await getNotificationPreferences();
   return preferences[pollyId]?.subscribed === true || preferences[`driver_${pollyId}`]?.subscribed === true;
 }
 
@@ -42,8 +43,8 @@ function setupPollyListener(pollyId) {
 
   console.log(`Setting up listener for polly: ${pollyId}`);
 
-  const unsubscribe = db.collection('pollies').doc(pollyId).onSnapshot((doc) => {
-    if (!shouldNotifyForPolly(pollyId)) {
+  const unsubscribe = db.collection('pollies').doc(pollyId).onSnapshot(async (doc) => {
+    if (!(await shouldNotifyForPolly(pollyId))) {
       return; // User unsubscribed
     }
 
@@ -81,8 +82,8 @@ function removePollyListener(pollyId) {
 }
 
 // Function to update listeners based on current preferences
-function updateListeners() {
-  const preferences = getNotificationPreferences();
+async function updateListeners() {
+  const preferences = await getNotificationPreferences();
 
   // Get all polly IDs we should be listening to
   const pollyIds = new Set();
@@ -115,16 +116,16 @@ function updateListeners() {
 }
 
 // Initialize listeners on service worker start
-self.addEventListener('activate', () => {
+self.addEventListener('activate', async () => {
   console.log('Service worker activated, setting up polly listeners');
-  updateListeners();
+  await updateListeners();
 });
 
 // Listen for messages from the main thread to update preferences
-self.addEventListener('message', (event) => {
+self.addEventListener('message', async (event) => {
   if (event.data && event.data.type === 'UPDATE_NOTIFICATION_PREFERENCES') {
     console.log('Received notification preferences update');
-    updateListeners();
+    await updateListeners();
   }
 });
 

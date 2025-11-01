@@ -56,14 +56,14 @@ const emit = defineEmits<Emits>()
 const showModal = ref(false)
 const enableNotifications = ref(false)
 
-watch(() => props.modelValue, (newValue) => {
+watch(() => props.modelValue, async (newValue) => {
   showModal.value = newValue
   if (newValue) {
     // Initialize checkbox state when modal opens
     if (props.modalType === 'polly' && props.pollyId) {
-      enableNotifications.value = NotificationService.isSubscribedToPolly(props.pollyId)
+      enableNotifications.value = await NotificationService.isSubscribedToPolly(props.pollyId)
     } else if (props.modalType === 'driver' && props.driverId) {
-      enableNotifications.value = NotificationService.isSubscribedToDriverPassengers(props.driverId)
+      enableNotifications.value = await NotificationService.isSubscribedToDriverPassengers(props.driverId)
     }
   }
 })

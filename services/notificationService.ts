@@ -1,3 +1,5 @@
+import localForage from 'localforage'
+
 /**
  * Notification service for Firestore-based notifications
  * Handles notification permissions and service worker communication
@@ -56,9 +58,9 @@ export class NotificationService {
        }
 
        // Store subscription preference locally
-       const subscriptions = this.getSubscriptions()
+       const subscriptions = await this.getSubscriptions()
        subscriptions[pollyId] = { subscribed: true, timestamp: Date.now() }
-       localStorage.setItem('carpolly_notifications', JSON.stringify(subscriptions))
+       await localForage.setItem('carpolly_notifications', subscriptions)
 
        // Register service worker if not already registered
        await this.registerServiceWorker()
@@ -91,9 +93,9 @@ export class NotificationService {
         }
 
         // Store subscription preference locally
-        const subscriptions = this.getSubscriptions()
+        const subscriptions = await this.getSubscriptions()
         subscriptions[`driver_${driverId}`] = { subscribed: true, timestamp: Date.now() }
-        localStorage.setItem('carpolly_notifications', JSON.stringify(subscriptions))
+        await localForage.setItem('carpolly_notifications', subscriptions)
 
         // Register service worker if not already registered
         await this.registerServiceWorker()
@@ -114,11 +116,11 @@ export class NotificationService {
   /**
     * Unsubscribe from notifications for a specific polly
     */
-   static unsubscribeFromPolly(pollyId: string): void {
-     const subscriptions = this.getSubscriptions()
+   static async unsubscribeFromPolly(pollyId: string): Promise<void> {
+     const subscriptions = await this.getSubscriptions()
      if (subscriptions[pollyId]) {
        delete subscriptions[pollyId]
-       localStorage.setItem('carpolly_notifications', JSON.stringify(subscriptions))
+       await localForage.setItem('carpolly_notifications', subscriptions)
        // Notify service worker of preference change
        this.notifyServiceWorker()
        // Notify subscribers of change
@@ -129,11 +131,11 @@ export class NotificationService {
    /**
     * Unsubscribe from notifications for driver passenger changes
     */
-   static unsubscribeFromDriverPassengers(driverId: string): void {
-     const subscriptions = this.getSubscriptions()
+   static async unsubscribeFromDriverPassengers(driverId: string): Promise<void> {
+     const subscriptions = await this.getSubscriptions()
      if (subscriptions[`driver_${driverId}`]) {
        delete subscriptions[`driver_${driverId}`]
-       localStorage.setItem('carpolly_notifications', JSON.stringify(subscriptions))
+       await localForage.setItem('carpolly_notifications', subscriptions)
        // Notify service worker of preference change
        this.notifyServiceWorker()
        // Notify subscribers of change
@@ -144,30 +146,30 @@ export class NotificationService {
   /**
     * Check if user is subscribed to a specific polly
     */
-   static isSubscribedToPolly(pollyId: string): boolean {
-     const subscriptions = this.getSubscriptions()
+   static async isSubscribedToPolly(pollyId: string): Promise<boolean> {
+     const subscriptions = await this.getSubscriptions()
      return subscriptions[pollyId]?.subscribed === true
    }
 
    /**
     * Check if user is subscribed to driver passenger changes
     */
-   static isSubscribedToDriverPassengers(driverId: string): boolean {
-     const subscriptions = this.getSubscriptions()
+   static async isSubscribedToDriverPassengers(driverId: string): Promise<boolean> {
+     const subscriptions = await this.getSubscriptions()
      return subscriptions[`driver_${driverId}`]?.subscribed === true
    }
 
   /**
-    * Get all notification subscriptions
-    */
-   private static getSubscriptions(): Record<string, { subscribed: boolean; timestamp: number }> {
-     try {
-       const stored = localStorage.getItem('carpolly_notifications')
-       return stored ? JSON.parse(stored) : {}
-     } catch {
-       return {}
-     }
-   }
+   * Get all notification subscriptions
+   */
+  private static async getSubscriptions(): Promise<Record<string, { subscribed: boolean; timestamp: number }>> {
+    try {
+      const stored = await localForage.getItem('carpolly_notifications')
+      return stored ? (stored as Record<string, { subscribed: boolean; timestamp: number }>) : {}
+    } catch {
+      return {}
+    }
+  }
 
   /**
    * Notify service worker of preference changes
