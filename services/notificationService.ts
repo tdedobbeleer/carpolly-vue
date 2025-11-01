@@ -16,6 +16,20 @@ export class NotificationService {
   }
 
   /**
+   * Register service worker for notifications
+   */
+  static async registerServiceWorker(): Promise<void> {
+    if (!this.isSupported()) return
+
+    try {
+      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js')
+      console.log('Service Worker registered successfully:', registration)
+    } catch (error) {
+      console.error('Service Worker registration failed:', error)
+    }
+  }
+
+  /**
    * Request notification permission from user
    */
   static async requestPermission(): Promise<NotificationPermission> {
@@ -45,6 +59,9 @@ export class NotificationService {
        const subscriptions = this.getSubscriptions()
        subscriptions[pollyId] = { subscribed: true, timestamp: Date.now() }
        localStorage.setItem('carpolly_notifications', JSON.stringify(subscriptions))
+
+       // Register service worker if not already registered
+       await this.registerServiceWorker()
 
        // Notify service worker of preference change
        this.notifyServiceWorker()
@@ -77,6 +94,9 @@ export class NotificationService {
         const subscriptions = this.getSubscriptions()
         subscriptions[`driver_${driverId}`] = { subscribed: true, timestamp: Date.now() }
         localStorage.setItem('carpolly_notifications', JSON.stringify(subscriptions))
+
+        // Register service worker if not already registered
+        await this.registerServiceWorker()
 
         // Notify service worker of preference change
         this.notifyServiceWorker()
