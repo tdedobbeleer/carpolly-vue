@@ -101,12 +101,14 @@ function setupPollyListener(pollyId) {
           }
         } else {
           // Check for consumer changes
+          let consumerChanged = false;
           for (let i = 0; i < currDrivers.length; i++) {
             const currDriver = currDrivers[i];
             const prevDriver = prevDrivers.find(d => d.id === currDriver.id);
 
             if (prevDriver && currDriver.consumers && prevDriver.consumers) {
               if (currDriver.consumers.length !== prevDriver.consumers.length) {
+                consumerChanged = true;
                 if (currDriver.consumers.length > prevDriver.consumers.length) {
                   notificationTitle = 'Passenger Joined';
                   notificationBody = `Someone joined ${currDriver.name}'s ride in ${pollyDescription}`;
@@ -117,6 +119,12 @@ function setupPollyListener(pollyId) {
                 break;
               }
             }
+          }
+
+          // If no consumer changes detected, it might be a driver update
+          if (!consumerChanged) {
+            notificationTitle = 'Driver Updated';
+            notificationBody = `A driver in ${pollyDescription} was updated`;
           }
         }
 
@@ -134,41 +142,49 @@ function setupPollyListener(pollyId) {
 
       // Update previous state
       previousStates.set(pollyId, currentState);
-
-      // Also listen to polly document changes
-      docRef.onSnapshot(async (doc) => {
-        if (!(await shouldNotifyForPolly(pollyId))) {
-          return; // User unsubscribed
-        }
-
-        if (doc.exists) {
-          const pollyData = doc.data();
-          const pollyDescription = pollyData?.description || 'Carpool';
-
-          // Check if description changed
-          const prevState = previousStates.get(pollyId);
-          if (prevState && prevState.description !== pollyData?.description) {
-            // Show notification for polly description changes
-            const notificationTitle = 'Polly Updated';
-            const notificationOptions = {
-              body: `${pollyDescription} description was updated`,
-              icon: '/logo.png',
-              badge: '/favicon-96x96.png',
-              tag: `carpolly-${pollyId}`,
-              data: { url: `/polly/${pollyId}`, pollyId }
-            };
-
-            self.registration.showNotification(notificationTitle, notificationOptions);
-
-            // Update stored state
-            const updatedState = { ...prevState, description: pollyData?.description };
-            previousStates.set(pollyId, updatedState);
-          }
-        }
-      });
     }
   }, (error) => {
     console.error(`Error listening to polly ${pollyId}:`, error);
+  });
+
+  // Also listen to polly document changes
+  const pollyUnsubscribe = docRef.onSnapshot(async (doc) => {
+    if (!(await shouldNotifyForPolly(pollyId))) {
+      return; // User unsubscribed
+    }
+
+    if (doc.exists) {
+      const pollyData = doc.data();
+      const pollyDescription = pollyData?.description || 'Carpool';
+
+      // Check if description changed
+      const prevState = previousStates.get(pollyId);
+      if (prevState && prevState.description !== pollyData?.description) {
+        // Show notification for polly description changes
+        const notificationTitle = 'Polly Updated';
+        const notificationOptions = {
+          body: `${pollyDescription} description was updated`,
+          icon: '/logo.png',
+          badge: '/favicon-96x96.png',
+          tag: `carpolly-${pollyId}`,
+          data: { url: `/polly/${pollyId}`, pollyId }
+        };
+
+        self.registration.showNotification(notificationTitle, notificationOptions);
+
+        // Update stored state
+        const updatedState = { ...prevState, description: pollyData?.description };
+        previousStates.set(pollyId, updatedState);
+      }
+    }
+  }, (error) => {
+    console.error(`Error listening to polly ${pollyId}:`, error);
+  });
+
+  // Store both unsubscribers
+  activeListeners.set(pollyId, () => {
+    unsubscribe();
+    pollyUnsubscribe();
   });
 
   activeListeners.set(pollyId, unsubscribe);
