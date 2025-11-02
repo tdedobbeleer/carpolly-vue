@@ -18,6 +18,9 @@ const db = firebase.firestore();
 // Store active listeners to avoid duplicates
 const activeListeners = new Map();
 
+// Store previous state to detect changes
+const previousStates = new Map();
+
 // Function to get notification preferences from localForage
 async function getNotificationPreferences() {
   try {
@@ -43,26 +46,126 @@ function setupPollyListener(pollyId) {
 
   console.log(`Setting up listener for polly: ${pollyId}`);
 
-  const unsubscribe = db.collection('pollies').doc(pollyId).onSnapshot(async (doc) => {
+  const docRef = db.collection('pollies').doc(pollyId);
+  const driversCollection = db.collection(docRef, 'drivers');
+
+  // Listen to changes in the drivers collection
+  const unsubscribe = driversCollection.onSnapshot(async (driversSnap) => {
     if (!(await shouldNotifyForPolly(pollyId))) {
       return; // User unsubscribed
     }
 
-    if (doc.exists) {
-      const data = doc.data();
-      const pollyDescription = data?.description || 'Carpool';
+    const docSnap = await db.collection('pollies').doc(pollyId).get();
+    if (docSnap.exists) {
+      const data = docSnap.data();
+      const previousState = previousStates.get(pollyId);
 
-      // Show notification for polly changes
-      const notificationTitle = 'Polly Updated';
-      const notificationOptions = {
-        body: `${pollyDescription} has been updated`,
-        icon: '/logo.png',
-        badge: '/favicon-96x96.png',
-        tag: `carpolly-${pollyId}`,
-        data: { url: `/polly/${pollyId}`, pollyId }
+      // Get current state
+      const currentDrivers = await Promise.all(driversSnap.docs.map(async driverDoc => {
+        const consumersSnap = await db.collection(driverDoc.ref, 'consumers').get();
+        const consumers = consumersSnap.docs.map(consumerDoc => ({
+          id: consumerDoc.id,
+          ...consumerDoc.data()
+        }));
+        return {
+          id: driverDoc.id,
+          ...driverDoc.data(),
+          consumers
+        };
+      }));
+
+      const currentState = {
+        ...data,
+        drivers: currentDrivers
       };
 
-      self.registration.showNotification(notificationTitle, notificationOptions);
+      // Compare with previous state to detect changes
+      if (previousState && JSON.stringify(previousState) !== JSON.stringify(currentState)) {
+        const pollyDescription = data?.description || 'Carpool';
+
+        // Detect what changed
+        let notificationTitle = 'Polly Updated';
+        let notificationBody = `${pollyDescription} has been updated`;
+
+        // Check for driver changes
+        const prevDrivers = previousState.drivers || [];
+        const currDrivers = currentState.drivers || [];
+
+        if (prevDrivers.length !== currDrivers.length) {
+          if (currDrivers.length > prevDrivers.length) {
+            notificationTitle = 'New Driver Added';
+            notificationBody = `A new driver joined ${pollyDescription}`;
+          } else {
+            notificationTitle = 'Driver Removed';
+            notificationBody = `A driver was removed from ${pollyDescription}`;
+          }
+        } else {
+          // Check for consumer changes
+          for (let i = 0; i < currDrivers.length; i++) {
+            const currDriver = currDrivers[i];
+            const prevDriver = prevDrivers.find(d => d.id === currDriver.id);
+
+            if (prevDriver && currDriver.consumers && prevDriver.consumers) {
+              if (currDriver.consumers.length !== prevDriver.consumers.length) {
+                if (currDriver.consumers.length > prevDriver.consumers.length) {
+                  notificationTitle = 'Passenger Joined';
+                  notificationBody = `Someone joined ${currDriver.name}'s ride in ${pollyDescription}`;
+                } else {
+                  notificationTitle = 'Passenger Left';
+                  notificationBody = `Someone left ${currDriver.name}'s ride in ${pollyDescription}`;
+                }
+                break;
+              }
+            }
+          }
+        }
+
+        // Show notification
+        const notificationOptions = {
+          body: notificationBody,
+          icon: '/logo.png',
+          badge: '/favicon-96x96.png',
+          tag: `carpolly-${pollyId}`,
+          data: { url: `/polly/${pollyId}`, pollyId }
+        };
+
+        self.registration.showNotification(notificationTitle, notificationOptions);
+      }
+
+      // Update previous state
+      previousStates.set(pollyId, currentState);
+
+      // Also listen to polly document changes
+      docRef.onSnapshot(async (doc) => {
+        if (!(await shouldNotifyForPolly(pollyId))) {
+          return; // User unsubscribed
+        }
+
+        if (doc.exists) {
+          const pollyData = doc.data();
+          const pollyDescription = pollyData?.description || 'Carpool';
+
+          // Check if description changed
+          const prevState = previousStates.get(pollyId);
+          if (prevState && prevState.description !== pollyData?.description) {
+            // Show notification for polly description changes
+            const notificationTitle = 'Polly Updated';
+            const notificationOptions = {
+              body: `${pollyDescription} description was updated`,
+              icon: '/logo.png',
+              badge: '/favicon-96x96.png',
+              tag: `carpolly-${pollyId}`,
+              data: { url: `/polly/${pollyId}`, pollyId }
+            };
+
+            self.registration.showNotification(notificationTitle, notificationOptions);
+
+            // Update stored state
+            const updatedState = { ...prevState, description: pollyData?.description };
+            previousStates.set(pollyId, updatedState);
+          }
+        }
+      });
     }
   }, (error) => {
     console.error(`Error listening to polly ${pollyId}:`, error);
