@@ -148,6 +148,67 @@ function setupPollyListener(pollyId) {
 
       // Update previous state
       previousStates.set(pollyId, currentState);
+
+      // Set up individual consumer listeners for each driver
+      driversSnap.docs.forEach(driverDoc => {
+        const consumersCollection = driverDoc.ref.collection('consumers');
+        consumersCollection.onSnapshot(async (consumersSnap) => {
+          if (!(await shouldNotifyForPolly(pollyId))) {
+            return; // User unsubscribed
+          }
+
+          // Get current consumer count
+          const currentConsumerCount = consumersSnap.docs.length;
+
+          // Get previous consumer count for this driver
+          const prevState = previousStates.get(pollyId);
+          const prevDriver = prevState?.drivers?.find(d => d.id === driverDoc.id);
+          const previousConsumerCount = prevDriver?.consumers?.length || 0;
+
+          if (currentConsumerCount !== previousConsumerCount) {
+            const pollyDescription = data?.description || 'Carpool';
+            const driverData = driverDoc.data();
+
+            let notificationTitle, notificationBody;
+            if (currentConsumerCount > previousConsumerCount) {
+              notificationTitle = 'Passenger Joined';
+              notificationBody = `Someone joined ${driverData.name}'s ride in ${pollyDescription}`;
+            } else {
+              notificationTitle = 'Passenger Left';
+              notificationBody = `Someone left ${driverData.name}'s ride in ${pollyDescription}`;
+            }
+
+            // Show notification
+            const notificationOptions = {
+              body: notificationBody,
+              icon: '/logo.png',
+              badge: '/favicon-96x96.png',
+              tag: `carpolly-${pollyId}`,
+              data: { url: `/polly/${pollyId}`, pollyId }
+            };
+
+            console.log('Showing consumer notification:', notificationTitle, notificationOptions);
+            try {
+              await self.registration.showNotification(notificationTitle, notificationOptions);
+              console.log('Consumer notification shown successfully');
+            } catch (error) {
+              console.error('Failed to show consumer notification:', error);
+            }
+
+            // Update the stored state with new consumer count
+            if (prevState) {
+              const updatedDrivers = prevState.drivers.map(d =>
+                d.id === driverDoc.id
+                  ? { ...d, consumers: consumersSnap.docs.map(c => ({ id: c.id, ...c.data() })) }
+                  : d
+              );
+              previousStates.set(pollyId, { ...prevState, drivers: updatedDrivers });
+            }
+          }
+        }, (error) => {
+          console.error(`Error listening to consumers for driver ${driverDoc.id}:`, error);
+        });
+      });
     }
   }, (error) => {
     console.error(`Error listening to polly ${pollyId}:`, error);
