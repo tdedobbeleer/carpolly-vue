@@ -47,7 +47,7 @@ function setupPollyListener(pollyId) {
   console.log(`Setting up listener for polly: ${pollyId}`);
 
   const docRef = db.collection('pollies').doc(pollyId);
-  const driversCollection = db.collection(docRef, 'drivers');
+  const driversCollection = docRef.collection('drivers');
 
   // Listen to changes in the drivers collection
   const unsubscribe = driversCollection.onSnapshot(async (driversSnap) => {
@@ -62,7 +62,7 @@ function setupPollyListener(pollyId) {
 
       // Get current state
       const currentDrivers = await Promise.all(driversSnap.docs.map(async driverDoc => {
-        const consumersSnap = await db.collection(driverDoc.ref, 'consumers').get();
+        const consumersSnap = await driverDoc.ref.collection('consumers').get();
         const consumers = consumersSnap.docs.map(consumerDoc => ({
           id: consumerDoc.id,
           ...consumerDoc.data()
