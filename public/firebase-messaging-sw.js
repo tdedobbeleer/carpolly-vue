@@ -137,7 +137,13 @@ function setupPollyListener(pollyId) {
           data: { url: `/polly/${pollyId}`, pollyId }
         };
 
-        self.registration.showNotification(notificationTitle, notificationOptions);
+        console.log('Showing notification:', notificationTitle, notificationOptions);
+        try {
+          await self.registration.showNotification(notificationTitle, notificationOptions);
+          console.log('Notification shown successfully');
+        } catch (error) {
+          console.error('Failed to show notification:', error);
+        }
       }
 
       // Update previous state
@@ -170,7 +176,13 @@ function setupPollyListener(pollyId) {
           data: { url: `/polly/${pollyId}`, pollyId }
         };
 
-        self.registration.showNotification(notificationTitle, notificationOptions);
+        console.log('Showing polly description notification:', notificationTitle, notificationOptions);
+        try {
+          await self.registration.showNotification(notificationTitle, notificationOptions);
+          console.log('Polly description notification shown successfully');
+        } catch (error) {
+          console.error('Failed to show polly description notification:', error);
+        }
 
         // Update stored state
         const updatedState = { ...prevState, description: pollyData?.description };
@@ -186,8 +198,6 @@ function setupPollyListener(pollyId) {
     unsubscribe();
     pollyUnsubscribe();
   });
-
-  activeListeners.set(pollyId, unsubscribe);
 }
 
 // Function to remove polly listener
