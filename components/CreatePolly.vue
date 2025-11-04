@@ -18,7 +18,7 @@
         </BFormGroup>
         <BFormGroup v-if="NotificationService.isSupported()" class="mt-3">
           <BFormCheckbox v-model="enableNotifications" id="enable-notifications">
-            <small>Enable notifications for this polly (you can change this later)</small>
+            <small>Enable notifications for this polly (you can change this later) <BBadge variant="warning">Beta</BBadge></small>
           </BFormCheckbox>
         </BFormGroup>
         <BButton class="mt-3" type="submit" variant="primary">Create a Carpolly!</BButton>
@@ -63,7 +63,7 @@
 import { ref, onMounted } from 'vue'
 import { v4 as uuidv4 } from 'uuid'
 import { useRouter } from 'vue-router'
-import { BForm, BFormGroup, BFormInput, BFormCheckbox, BButton, BCard, BCol, BRow, BListGroup, BListGroupItem } from 'bootstrap-vue-next'
+import { BForm, BFormGroup, BFormInput, BFormCheckbox, BButton, BCard, BCol, BRow, BListGroup, BListGroupItem, BBadge } from 'bootstrap-vue-next'
 import { dataService } from '../services/dataService'
 import { ValidationService } from '../services/validationService'
 import { NotificationService } from '../services/notificationService'
