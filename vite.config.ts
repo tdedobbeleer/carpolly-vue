@@ -24,9 +24,9 @@ export default defineConfig({
           ui: ['bootstrap-vue-next']
         },
         // Generate unique chunk names for better caching and security
-        chunkFileNames: 'assets/[name]-[hash].js',
-        entryFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]'
+        chunkFileNames: 'assets/[name]-[hash:10].js',
+        entryFileNames: 'assets/[name]-[hash:10].js',
+        assetFileNames: 'assets/[name]-[hash:10].[ext]'
       }
     }
   }
