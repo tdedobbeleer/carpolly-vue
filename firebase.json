@@ -30,12 +30,6 @@
         "destination": "/index.html"
       }
     ],
-    "redirects": [ 
-      {
-        "source": "www.carpolly.com",
-        "destination": "https://carpolly.com",
-        "type": 302
-      } ],
     "headers": [
       {
         "source": "/*.html",
