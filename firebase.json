@@ -24,6 +24,13 @@
       "**/.*",
       "**/node_modules/**"
     ],
+    "redirects": [ 
+      {
+        "source": "www.carpolly.com",
+        "destination": "https://carpolly.com",
+        "type": 302
+      } 
+    ],
     "rewrites": [
       {
         "source": "**",
