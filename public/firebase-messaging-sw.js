@@ -93,11 +93,17 @@ function setupPollyListener(pollyId) {
 
         if (prevDrivers.length !== currDrivers.length) {
           if (currDrivers.length > prevDrivers.length) {
-            notificationTitle = 'New Driver Added';
-            notificationBody = `A new driver joined ${pollyDescription}`;
+            const newDriver = currDrivers.find(d => !prevDrivers.some(pd => pd.id === d.id));
+            if (newDriver) {
+              notificationTitle = 'New Driver Added';
+              notificationBody = `${newDriver.name} joined ${pollyDescription}`;
+            }
           } else {
-            notificationTitle = 'Driver Removed';
-            notificationBody = `A driver was removed from ${pollyDescription}`;
+            const removedDriver = prevDrivers.find(pd => !currDrivers.some(cd => cd.id === pd.id));
+            if (removedDriver) {
+              notificationTitle = 'Driver Removed';
+              notificationBody = `${removedDriver.name} left ${pollyDescription}`;
+            }
           }
         } else {
           // Check for consumer changes
@@ -110,11 +116,17 @@ function setupPollyListener(pollyId) {
               if (currDriver.consumers.length !== prevDriver.consumers.length) {
                 consumerChanged = true;
                 if (currDriver.consumers.length > prevDriver.consumers.length) {
-                  notificationTitle = 'Passenger Joined';
-                  notificationBody = `Someone joined ${currDriver.name}'s ride in ${pollyDescription}`;
+                  const newConsumer = currDriver.consumers.find(c => !prevDriver.consumers.some(pc => pc.id === c.id));
+                  if (newConsumer) {
+                    notificationTitle = 'Passenger Joined';
+                    notificationBody = `${newConsumer.name} joined ${currDriver.name}'s ride in ${pollyDescription}`;
+                  }
                 } else {
-                  notificationTitle = 'Passenger Left';
-                  notificationBody = `Someone left ${currDriver.name}'s ride in ${pollyDescription}`;
+                  const removedConsumer = prevDriver.consumers.find(pc => !currDriver.consumers.some(cc => cc.id === pc.id));
+                  if (removedConsumer) {
+                    notificationTitle = 'Passenger Left';
+                    notificationBody = `${removedConsumer.name} left ${currDriver.name}'s ride in ${pollyDescription}`;
+                  }
                 }
                 break;
               }
@@ -171,11 +183,18 @@ function setupPollyListener(pollyId) {
 
             let notificationTitle, notificationBody;
             if (currentConsumerCount > previousConsumerCount) {
-              notificationTitle = 'Passenger Joined';
-              notificationBody = `Someone joined ${driverData.name}'s ride in ${pollyDescription}`;
+              const newConsumerDoc = consumersSnap.docs.find(c => !prevDriver.consumers.some(pc => pc.id === c.id));
+              if (newConsumerDoc) {
+                const newConsumerData = newConsumerDoc.data();
+                notificationTitle = 'Passenger Joined';
+                notificationBody = `${newConsumerData.name} joined ${driverData.name}'s ride in ${pollyDescription}`;
+              }
             } else {
-              notificationTitle = 'Passenger Left';
-              notificationBody = `Someone left ${driverData.name}'s ride in ${pollyDescription}`;
+              const removedConsumer = prevDriver.consumers.find(pc => !consumersSnap.docs.some(c => c.id === pc.id));
+              if (removedConsumer) {
+                notificationTitle = 'Passenger Left';
+                notificationBody = `${removedConsumer.name} left ${driverData.name}'s ride in ${pollyDescription}`;
+              }
             }
 
             // Show notification
