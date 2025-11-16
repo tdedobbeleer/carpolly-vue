@@ -35,7 +35,12 @@ async function getNotificationPreferences() {
 // Function to check if we should notify for a polly
 async function shouldNotifyForPolly(pollyId) {
   const preferences = await getNotificationPreferences();
-  return preferences[pollyId]?.subscribed === true || preferences[`driver_${pollyId}`]?.subscribed === true;
+  if (preferences[pollyId]?.subscribed === true) return true;
+  const driversSnap = await db.collection('pollies').doc(pollyId).collection('drivers').get();
+  for (const driverDoc of driversSnap.docs) {
+    if (preferences[`driver_${driverDoc.id}`]?.subscribed === true) return true;
+  }
+  return false;
 }
 
 // Function to setup polly listener
@@ -297,17 +302,23 @@ async function updateListeners() {
   // Get all polly IDs we should be listening to
   const pollyIds = new Set();
 
-  Object.keys(preferences).forEach(key => {
+  for (const key of Object.keys(preferences)) {
     if (preferences[key]?.subscribed === true) {
       if (key.startsWith('driver_')) {
-        // For driver notifications, we still listen to the polly
-        const pollyId = key.replace('driver_', '');
-        pollyIds.add(pollyId);
+        // For driver notifications, find the polly ID
+        const driverId = key.replace('driver_', '');
+        const driverQuery = db.collectionGroup('drivers').where(firebase.firestore.FieldPath.documentId(), '==', driverId);
+        const driverSnap = await driverQuery.get();
+        if (!driverSnap.empty) {
+          const driverDoc = driverSnap.docs[0];
+          const pollyId = driverDoc.ref.parent.parent.id;
+          pollyIds.add(pollyId);
+        }
       } else {
         pollyIds.add(key);
       }
     }
-  });
+  }
 
   // Remove listeners for pollys we no longer care about
   activeListeners.forEach((_, pollyId) => {
