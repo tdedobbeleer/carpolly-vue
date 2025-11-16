@@ -10,7 +10,6 @@
     <div class="text-center">
       <i :class="`bi bi-bell${enableNotifications ? '-fill' : ''} text-primary fs-1 mb-3`"></i>
       <h5>{{ modalType === 'polly' ? 'Push Notifications' : 'Driver Notifications' }}</h5>
-      <p class="text-warning small">This is a beta feature and may be subject to changes or might not work properly.</p>
       <p v-if="modalType === 'polly'">
         Get notified when drivers or passengers join "{{ pollyDescription }}"
       </p>

@@ -143,7 +143,7 @@ function setupPollyListener(pollyId) {
         // Show notification
         const notificationOptions = {
           body: notificationBody,
-          icon: '/logo.png',
+          icon: '/parrot-msg.png',
           badge: '/favicon-96x96.png',
           tag: `carpolly-${pollyId}`,
           data: { url: `/polly/${pollyId}`, pollyId }
@@ -206,10 +206,10 @@ function setupPollyListener(pollyId) {
               data: { url: `/polly/${pollyId}`, pollyId }
             };
 
-            console.log('Showing consumer notification:', notificationTitle, notificationOptions);
+            //console.log('Showing consumer notification:', notificationTitle, notificationOptions);
             try {
               await self.registration.showNotification(notificationTitle, notificationOptions);
-              console.log('Consumer notification shown successfully');
+              //console.log('Consumer notification shown successfully');
             } catch (error) {
               console.error('Failed to show consumer notification:', error);
             }
@@ -250,16 +250,16 @@ function setupPollyListener(pollyId) {
         const notificationTitle = 'Polly Updated';
         const notificationOptions = {
           body: `${pollyDescription} description was updated`,
-          icon: '/logo.png',
+          icon: '/parrot-msg.png',
           badge: '/favicon-96x96.png',
           tag: `carpolly-${pollyId}`,
           data: { url: `/polly/${pollyId}`, pollyId }
         };
 
-        console.log('Showing polly description notification:', notificationTitle, notificationOptions);
+        //console.log('Showing polly description notification:', notificationTitle, notificationOptions);
         try {
           await self.registration.showNotification(notificationTitle, notificationOptions);
-          console.log('Polly description notification shown successfully');
+          //console.log('Polly description notification shown successfully');
         } catch (error) {
           console.error('Failed to show polly description notification:', error);
         }

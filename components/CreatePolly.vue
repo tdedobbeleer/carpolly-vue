@@ -18,7 +18,7 @@
         </BFormGroup>
         <BFormGroup v-if="NotificationService.isSupported()" class="mt-3">
           <BFormCheckbox v-model="enableNotifications" id="enable-notifications">
-            <small>Enable notifications for this polly (you can change this later) <BBadge variant="warning">Beta</BBadge></small>
+            <small>Enable notifications for this polly (you can change this later)</small>
           </BFormCheckbox>
         </BFormGroup>
         <BButton class="mt-3" type="submit" variant="primary">Create a Carpolly!</BButton>
