@@ -165,7 +165,7 @@
     <NotificationSettingsModal
       v-model="showNotificationModal"
       :modal-type="notificationModalType"
-      :polly-id="notificationModalType === 'polly' ? id : undefined"
+      :polly-id="id"
       :polly-description="notificationModalType === 'polly' ? polly?.description : undefined"
       :driver-id="notificationModalType === 'driver' ? currentDriverId : undefined"
       :driver-name="notificationModalType === 'driver' ? currentDriverName : undefined"
@@ -224,7 +224,7 @@ const loadSubscriptionStates = async () => {
   if (polly.value?.drivers) {
     for (const driver of polly.value.drivers) {
       if (driver.id) {
-        driverSubscriptions.value[driver.id] = await NotificationService.isSubscribedToDriverPassengers(driver.id)
+        driverSubscriptions.value[driver.id] = await NotificationService.isSubscribedToDriverPassengers(id.value, driver.id)
       }
     }
   }

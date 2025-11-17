@@ -62,8 +62,8 @@ watch(() => props.modelValue, async (newValue) => {
     // Initialize checkbox state when modal opens
     if (props.modalType === 'polly' && props.pollyId) {
       enableNotifications.value = await NotificationService.isSubscribedToPolly(props.pollyId)
-    } else if (props.modalType === 'driver' && props.driverId) {
-      enableNotifications.value = await NotificationService.isSubscribedToDriverPassengers(props.driverId)
+    } else if (props.modalType === 'driver' && props.driverId && props.pollyId) {
+      enableNotifications.value = await NotificationService.isSubscribedToDriverPassengers(props.pollyId, props.driverId)
     }
   }
 })
@@ -88,16 +88,16 @@ const handleSave = async () => {
         NotificationService.unsubscribeFromPolly(props.pollyId)
         alert('Notifications disabled for this polly.')
       }
-    } else if (props.modalType === 'driver' && props.driverId) {
+    } else if (props.modalType === 'driver' && props.driverId && props.pollyId) {
       if (enableNotifications.value) {
-        success = await NotificationService.subscribeToDriverPassengers(props.driverId)
+        success = await NotificationService.subscribeToDriverPassengers(props.pollyId, props.driverId)
         if (success) {
           alert('Driver notifications enabled! You\'ll be notified of passenger changes.')
         } else {
           alert('Failed to enable notifications. Please check your browser settings.')
         }
       } else {
-        NotificationService.unsubscribeFromDriverPassengers(props.driverId)
+        NotificationService.unsubscribeFromDriverPassengers(props.pollyId, props.driverId)
         alert('Driver notifications disabled.')
       }
     }

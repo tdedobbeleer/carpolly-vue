@@ -25,7 +25,7 @@ const previousStates = new Map();
 async function getNotificationPreferences() {
   try {
     const stored = await localforage.getItem('carpolly_notifications');
-    return stored || {};
+    return stored || { pollyNotifications: [], driverNotifications: [] };
   } catch (error) {
     console.error('Error reading notification preferences:', error);
     return {};
@@ -35,11 +35,16 @@ async function getNotificationPreferences() {
 // Function to check if we should notify for a polly
 async function shouldNotifyForPolly(pollyId) {
   const preferences = await getNotificationPreferences();
-  if (preferences[pollyId]?.subscribed === true) return true;
-  const driversSnap = await db.collection('pollies').doc(pollyId).collection('drivers').get();
-  for (const driverDoc of driversSnap.docs) {
-    if (preferences[`driver_${driverDoc.id}`]?.subscribed === true) return true;
-  }
+  if (preferences.pollyNotifications.includes(pollyId)) return true;
+  if (preferences.driverNotifications.some(d => d.pollyId === pollyId)) return true;
+  return false;
+}
+
+// Function to check if we should notify for a specific driver
+async function shouldNotifyForDriver(pollyId, driverId) {
+  const preferences = await getNotificationPreferences();
+  if (preferences.pollyNotifications.includes(pollyId)) return true;
+  if (preferences.driverNotifications.some(d => d.pollyId === pollyId && d.driverId === driverId)) return true;
   return false;
 }
 
@@ -119,21 +124,24 @@ function setupPollyListener(pollyId) {
 
             if (prevDriver && currDriver.consumers && prevDriver.consumers) {
               if (currDriver.consumers.length !== prevDriver.consumers.length) {
-                consumerChanged = true;
-                if (currDriver.consumers.length > prevDriver.consumers.length) {
-                  const newConsumer = currDriver.consumers.find(c => !prevDriver.consumers.some(pc => pc.id === c.id));
-                  if (newConsumer) {
-                    notificationTitle = 'Passenger Joined';
-                    notificationBody = `${newConsumer.name} joined ${currDriver.name}'s ride in ${pollyDescription}`;
+                // Check if we should notify for this specific driver
+                if (await shouldNotifyForDriver(pollyId, currDriver.id)) {
+                  consumerChanged = true;
+                  if (currDriver.consumers.length > prevDriver.consumers.length) {
+                    const newConsumer = currDriver.consumers.find(c => !prevDriver.consumers.some(pc => pc.id === c.id));
+                    if (newConsumer) {
+                      notificationTitle = 'Passenger Joined';
+                      notificationBody = `${newConsumer.name} joined ${currDriver.name}'s ride in ${pollyDescription}`;
+                    }
+                  } else {
+                    const removedConsumer = prevDriver.consumers.find(pc => !currDriver.consumers.some(cc => cc.id === pc.id));
+                    if (removedConsumer) {
+                      notificationTitle = 'Passenger Left';
+                      notificationBody = `${removedConsumer.name} left ${currDriver.name}'s ride in ${pollyDescription}`;
+                    }
                   }
-                } else {
-                  const removedConsumer = prevDriver.consumers.find(pc => !currDriver.consumers.some(cc => cc.id === pc.id));
-                  if (removedConsumer) {
-                    notificationTitle = 'Passenger Left';
-                    notificationBody = `${removedConsumer.name} left ${currDriver.name}'s ride in ${pollyDescription}`;
-                  }
+                  break;
                 }
-                break;
               }
             }
           }
@@ -170,8 +178,8 @@ function setupPollyListener(pollyId) {
       driversSnap.docs.forEach(driverDoc => {
         const consumersCollection = driverDoc.ref.collection('consumers');
         consumersCollection.onSnapshot(async (consumersSnap) => {
-          if (!(await shouldNotifyForPolly(pollyId))) {
-            return; // User unsubscribed
+          if (!(await shouldNotifyForDriver(pollyId, driverDoc.id))) {
+            return; // User unsubscribed from this driver
           }
 
           // Get current consumer count
@@ -300,35 +308,23 @@ async function updateListeners() {
   const preferences = await getNotificationPreferences();
 
   // Get all polly IDs we should be listening to
-  const pollyIds = new Set();
+  const pollyIdsToListen = new Set();
 
-  for (const key of Object.keys(preferences)) {
-    if (preferences[key]?.subscribed === true) {
-      if (key.startsWith('driver_')) {
-        // For driver notifications, find the polly ID
-        const driverId = key.replace('driver_', '');
-        const driverQuery = db.collectionGroup('drivers').where(firebase.firestore.FieldPath.documentId(), '==', driverId);
-        const driverSnap = await driverQuery.get();
-        if (!driverSnap.empty) {
-          const driverDoc = driverSnap.docs[0];
-          const pollyId = driverDoc.ref.parent.parent.id;
-          pollyIds.add(pollyId);
-        }
-      } else {
-        pollyIds.add(key);
-      }
-    }
-  }
+  // Add polly IDs from pollyNotifications
+  preferences.pollyNotifications.forEach(pollyId => pollyIdsToListen.add(pollyId));
+
+  // Add polly IDs from driverNotifications
+  preferences.driverNotifications.forEach(driverPref => pollyIdsToListen.add(driverPref.pollyId));
 
   // Remove listeners for pollys we no longer care about
   activeListeners.forEach((_, pollyId) => {
-    if (!pollyIds.has(pollyId)) {
+    if (!pollyIdsToListen.has(pollyId)) {
       removePollyListener(pollyId);
     }
   });
 
   // Add listeners for new pollys
-  pollyIds.forEach(pollyId => {
+  pollyIdsToListen.forEach(pollyId => {
     if (!activeListeners.has(pollyId)) {
       setupPollyListener(pollyId);
     }

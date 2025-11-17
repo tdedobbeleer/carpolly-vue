@@ -59,7 +59,9 @@ export class NotificationService {
 
        // Store subscription preference locally
        const subscriptions = await this.getSubscriptions()
-       subscriptions[pollyId] = { subscribed: true, timestamp: Date.now() }
+       if (!subscriptions?.pollyNotifications?.includes(pollyId)) {
+         subscriptions.pollyNotifications.push(pollyId)
+       }
        await localForage.setItem('carpolly_notifications', subscriptions)
 
        // Register service worker if not already registered
@@ -81,7 +83,7 @@ export class NotificationService {
    /**
      * Subscribe to notifications for driver passenger changes
      */
-    static async subscribeToDriverPassengers(driverId: string): Promise<boolean> {
+    static async subscribeToDriverPassengers(pollyId: string, driverId: string): Promise<boolean> {
       if (this.disabled || !this.isSupported()) {
         return false
       }
@@ -94,7 +96,9 @@ export class NotificationService {
 
         // Store subscription preference locally
         const subscriptions = await this.getSubscriptions()
-        subscriptions[`driver_${driverId}`] = { subscribed: true, timestamp: Date.now() }
+        if (!subscriptions?.driverNotifications?.some(d => d.pollyId === pollyId && d.driverId === driverId)) {
+          subscriptions.driverNotifications.push({ pollyId, driverId })
+        }
         await localForage.setItem('carpolly_notifications', subscriptions)
 
         // Register service worker if not already registered
@@ -118,8 +122,9 @@ export class NotificationService {
     */
    static async unsubscribeFromPolly(pollyId: string): Promise<void> {
      const subscriptions = await this.getSubscriptions()
-     if (subscriptions[pollyId]) {
-       delete subscriptions[pollyId]
+     const index = subscriptions?.pollyNotifications?.indexOf(pollyId)
+     if (index > -1) {
+       subscriptions.pollyNotifications.splice(index, 1)
        await localForage.setItem('carpolly_notifications', subscriptions)
        // Notify service worker of preference change
        this.notifyServiceWorker()
@@ -131,10 +136,11 @@ export class NotificationService {
    /**
     * Unsubscribe from notifications for driver passenger changes
     */
-   static async unsubscribeFromDriverPassengers(driverId: string): Promise<void> {
+   static async unsubscribeFromDriverPassengers(pollyId: string, driverId: string): Promise<void> {
      const subscriptions = await this.getSubscriptions()
-     if (subscriptions[`driver_${driverId}`]) {
-       delete subscriptions[`driver_${driverId}`]
+     const index = subscriptions?.driverNotifications?.findIndex(d => d.pollyId === pollyId && d.driverId === driverId)
+     if (index > -1) {
+       subscriptions.driverNotifications.splice(index, 1)
        await localForage.setItem('carpolly_notifications', subscriptions)
        // Notify service worker of preference change
        this.notifyServiceWorker()
@@ -148,37 +154,44 @@ export class NotificationService {
     */
    static async isSubscribedToPolly(pollyId: string): Promise<boolean> {
      const subscriptions = await this.getSubscriptions()
-     return subscriptions[pollyId]?.subscribed === true
+     return subscriptions?.pollyNotifications?.includes(pollyId)
    }
 
    /**
     * Check if user is subscribed to driver passenger changes
     */
-   static async isSubscribedToDriverPassengers(driverId: string): Promise<boolean> {
+   static async isSubscribedToDriverPassengers(pollyId: string, driverId: string): Promise<boolean> {
      const subscriptions = await this.getSubscriptions()
-     return subscriptions[`driver_${driverId}`]?.subscribed === true
+     return subscriptions?.driverNotifications?.some(d => d.pollyId === pollyId && d.driverId === driverId)
    }
 
   /**
    * Get all notification subscriptions
    */
-  private static async getSubscriptions(): Promise<Record<string, { subscribed: boolean; timestamp: number }>> {
+  private static async getSubscriptions(): Promise<{ pollyNotifications: string[]; driverNotifications: { pollyId: string; driverId: string }[] }> {
     try {
       const stored = await localForage.getItem('carpolly_notifications')
-      return stored ? (stored as Record<string, { subscribed: boolean; timestamp: number }>) : {}
+      const subscriptions = stored as { pollyNotifications?: string[]; driverNotifications?: { pollyId: string; driverId: string }[] }
+      return {
+        pollyNotifications: subscriptions?.pollyNotifications || [],
+        driverNotifications: subscriptions?.driverNotifications || []
+      }
     } catch {
-      return {}
+      return { pollyNotifications: [], driverNotifications: [] }
     }
   }
 
   /**
    * Notify service worker of preference changes
    */
-  private static notifyServiceWorker(): void {
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({
-        type: 'UPDATE_NOTIFICATION_PREFERENCES'
-      })
+  private static async notifyServiceWorker(): Promise<void> {
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.ready
+      if (registration.active) {
+        registration.active.postMessage({
+          type: 'UPDATE_NOTIFICATION_PREFERENCES'
+        })
+      }
     }
   }
 
