@@ -61,12 +61,17 @@
           <BButton
             v-if="NotificationService.isSupported()"
             size="sm"
-            :variant="isSubscribedToPolly ? 'primary' : 'outline-primary'"
+            variant="outline-primary"
             @click="showNotificationSettings"
             title="Notification settings"
+            class="position-relative"
           >
-            <i class="bi bi-bell-fill" v-if="isSubscribedToPolly"></i>
-            <i class="bi bi-bell" v-else></i>
+            <i class="bi bi-bell"></i>
+            <BBadge v-if="isSubscribedToPolly"
+              dot-indicator
+              variant="success"
+              class="position-absolute top-0 start-100 translate-middle"
+            />
           </BButton>
         </BCol>
       </BRow>
@@ -91,13 +96,17 @@
             </div>
             <BCardHeader>
               <div class="text-center">
-                <div class="btn btn-lg btn-primary disabled position-relative">
+                <BButton variant="primary" size="lg" disabled class="position-relative">
                   <i class="bi bi-car-front"></i>
-                  <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-secondary">
+                  <BBadge
+                    variant="info"
+                    pill
+                    class="position-absolute top-0 start-100 translate-middle"
+                  >
                     {{ driver.spots || 0 }}
                     <span class="visually-hidden">Total spots</span>
-                  </span>
-                </div>
+                  </BBadge>
+                </BButton>
                 <div>{{ driver.name }}</div>
               </div>
               <p>When & where?<br/>{{ driver.description }}</p>
@@ -132,12 +141,17 @@
                 <BButton
                   v-if="NotificationService.isSupported() && driver.id"
                   size="sm"
-                  :variant="driverSubscriptions[driver.id] ? 'primary' : 'outline-primary'"
+                  variant="outline-primary"
                   @click="showDriverNotificationSettings(driver.id!, driver.name)"
                   title="Driver notification settings"
+                  class="position-relative"
                 >
-                  <i class="bi bi-bell-fill" v-if="driverSubscriptions[driver.id]"></i>
-                  <i class="bi bi-bell" v-else></i>
+                  <i class="bi bi-bell"></i>
+                  <BBadge v-if="driverSubscriptions[driver.id]"
+                    dot-indicator
+                    variant="success"
+                    class="position-absolute top-0 start-100 translate-middle"
+                  />
                 </BButton>
               </BButtonGroup>
             </BCardFooter>
@@ -177,7 +191,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick, useTemplateRef, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
-import { BButton, BButtonGroup, BProgress, BModal, BCard, BCardBody, BCardFooter, BCardHeader, BCol, BRow, BListGroup, BListGroupItem } from 'bootstrap-vue-next'
+import { BButton, BButtonGroup, BProgress, BModal, BCard, BCardBody, BCardFooter, BCardHeader, BCol, BRow, BListGroup, BListGroupItem, BBadge } from 'bootstrap-vue-next'
 import AddDriverModal from './AddDriverModal.vue'
 import AddConsumerModal from './AddConsumerModal.vue'
 import NotificationSettingsModal from './NotificationSettingsModal.vue'
@@ -245,6 +259,7 @@ onMounted(() => {
   unsubscribe.value = dataService.subscribeToPolly(id.value, (data) => {
     polly.value = data
     isLoading.value = false
+    loadSubscriptionStates()
   })
 
   // Subscribe to notification changes
@@ -501,7 +516,7 @@ const saveTitle = async () => {
     content: '';
     position: absolute;
     top: 50%;
-    left: -60px;
+    left: -65px;
     transform: translateY(-50%);
     width: 80px;
     height: 80px;
