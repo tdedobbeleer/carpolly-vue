@@ -29,7 +29,7 @@
       </BCard>
 
       <!-- Previous Pollys Card -->
-      <BCard v-if="previousPollys.length > 0" class="mt-4" bg-variant="light">
+      <BCard v-if="previousPollys.length > 0" class="previous-pollies mt-3" bg-variant="light">
         <template #header>
           <h5 class="mb-0">Your Previous Carpollies</h5>
         </template>
@@ -190,4 +190,9 @@ const onSubmit = async () => {
 </script>
 
 <style scoped>
+@media (max-width: 768px) {
+  .previous-pollies {
+    margin-top: 65px !important;
+  }
+}
 </style>
