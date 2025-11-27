@@ -17,6 +17,7 @@ import { BNavbar, BContainer, BApp, BNav, BNavItem, BNavbarBrand } from 'bootstr
           <BNav class="ms-auto">
             <BNavItem to="/">Home</BNavItem>
             <BNavItem to="/faq">FAQ</BNavItem>
+            <BNavItem to="/support">Support</BNavItem>
             <BNavItem to="/about">About</BNavItem>
           </BNav>
         </BNavbar>

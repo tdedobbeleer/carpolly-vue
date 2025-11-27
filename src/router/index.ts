@@ -3,6 +3,7 @@ import CreatePolly from '../../components/CreatePolly.vue'
 import GetPolly from '../../components/GetPolly.vue'
 import FAQ from '../../components/FAQ.vue'
 import AboutPage from '../../components/AboutPage.vue'
+import SupportPage from '../../components/SupportPage.vue'
 
 const routes = [
   {
@@ -25,6 +26,11 @@ const routes = [
     path: '/about',
     name: 'AboutPage',
     component: AboutPage
+  },
+  {
+    path: '/support',
+    name: 'SupportPage',
+    component: SupportPage
   }
 ]
 
