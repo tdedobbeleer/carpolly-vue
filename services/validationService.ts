@@ -223,8 +223,8 @@ export class ValidationService {
   }
 
   /**
-   * Comprehensive form validation for driver creation
-   */
+    * Comprehensive form validation for driver creation
+    */
   static validateDriverForm(name: string, description: string, spots: number): {
     isValid: boolean;
     errors: { name?: string; description?: string; spots?: string }
@@ -238,6 +238,34 @@ export class ValidationService {
     if (!nameValidation.isValid) errors.name = nameValidation.error;
     if (!descriptionValidation.isValid) errors.description = descriptionValidation.error;
     if (!spotsValidation.isValid) errors.spots = spotsValidation.error;
+
+    return {
+      isValid: Object.keys(errors).length === 0,
+      errors
+    };
+  }
+
+  /**
+    * Comprehensive form validation for driver update
+    */
+  static validateDriverUpdateForm(name: string, description: string, spots: number, currentConsumersCount: number): {
+    isValid: boolean;
+    errors: { name?: string; description?: string; spots?: string }
+  } {
+    const nameValidation = this.validateName(name);
+    const descriptionValidation = this.validateDescription(description);
+    const spotsValidation = this.validateSpots(spots);
+
+    const errors: { name?: string; description?: string; spots?: string } = {};
+
+    if (!nameValidation.isValid) errors.name = nameValidation.error;
+    if (!descriptionValidation.isValid) errors.description = descriptionValidation.error;
+    if (!spotsValidation.isValid) errors.spots = spotsValidation.error;
+
+    // Additional validation: spots cannot be lower than current consumers
+    if (spots < currentConsumersCount) {
+      errors.spots = `Spots cannot be lower than the current number of passengers (${currentConsumersCount}). Please remove passengers first.`;
+    }
 
     return {
       isValid: Object.keys(errors).length === 0,

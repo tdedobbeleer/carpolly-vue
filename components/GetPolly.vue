@@ -94,7 +94,7 @@
                 <span class="visually-hidden">Loading...</span>
               </div>
             </div>
-            <BCardHeader>
+            <BCardHeader class="driver-header position-relative" @click="openEditDriverModal(driver)">
               <div class="text-center">
                 <BButton variant="primary" size="lg" disabled class="position-relative">
                   <i class="bi bi-car-front"></i>
@@ -115,6 +115,7 @@
                 :variant="getProgressVariant(driver.consumers?.length || 0, driver.spots || 0)"
                 :value="countProgress(driver.consumers?.length || 0, driver.spots || 0)"/>
               <p v-if="(driver.consumers?.length || 0) >= (driver.spots || 0)" class="text-danger mb-3">All spots are filled!<br/>{{ getRandomFunnyMessage() }}</p>
+              <i class="bi bi-pencil edit-driver-icon position-absolute top-0 end-0 m-2" title="Edit driver"></i>
             </BCardHeader>
             <BCardBody>
               <BListGroup v-if="driver.consumers?.length && driver.consumers?.length > 0">
@@ -176,6 +177,8 @@
 
     <AddConsumerModal v-model="showJoinModal" @consumer-added="onConsumerAdded" />
 
+    <EditConsumerModal ref="editConsumerModal" :driver="currentEditingDriver" :polly-id="id" @driver-updated="onDriverUpdated" />
+
     <NotificationSettingsModal
       v-model="showNotificationModal"
       :modal-type="notificationModalType"
@@ -194,11 +197,13 @@ import { useRoute } from 'vue-router'
 import { BButton, BButtonGroup, BProgress, BModal, BCard, BCardBody, BCardFooter, BCardHeader, BCol, BRow, BListGroup, BListGroupItem, BBadge } from 'bootstrap-vue-next'
 import AddDriverModal from './AddDriverModal.vue'
 import AddConsumerModal from './AddConsumerModal.vue'
+import EditConsumerModal from './EditConsumerModal.vue'
 import NotificationSettingsModal from './NotificationSettingsModal.vue'
 import { dataService } from '../services/dataService'
 import { ValidationService } from '../services/validationService'
 import { NotificationService } from '../services/notificationService'
 import type { Polly } from '../models/polly.model'
+import type { Driver } from '../models/driver.model'
 
 const route = useRoute()
 const id = ref(route.params.id as string)
@@ -218,11 +223,13 @@ const showEditIcon = ref(false)
 const titleInput = ref<HTMLInputElement | null>(null)
 const titleError = ref('')
 const addDriverModal = useTemplateRef('addDriverModal')
+const editConsumerModal = useTemplateRef('editConsumerModal')
 const updatingDrivers = ref<Set<number>>(new Set())
 const showNotificationModal = ref(false)
 const notificationModalType = ref<'polly' | 'driver'>('polly')
 const currentDriverId = ref('')
 const currentDriverName = ref('')
+const currentEditingDriver = ref<Driver | null>(null)
 
 // Reactive notification states
 const notificationState = ref(0)
@@ -283,6 +290,15 @@ onUnmounted(() => {
 
 const onDriverAdded = () => {
   // Modal is now controlled by useTemplateRef, no need to set showModal
+}
+
+const openEditDriverModal = (driver: Driver) => {
+  currentEditingDriver.value = driver
+  editConsumerModal.value?.show()
+}
+
+const onDriverUpdated = () => {
+  currentEditingDriver.value = null
 }
 
 const confirmRemove = (index: number) => {
@@ -515,6 +531,30 @@ const saveTitle = async () => {
 }
 
 .edit-icon:hover {
+  color: #495057;
+}
+
+.driver-header {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.driver-header:hover {
+  background-color: rgba(0, 123, 255, 0.1);
+}
+
+.edit-driver-icon {
+  color: #6c757d;
+  opacity: 0;
+  transition: opacity 0.2s, color 0.2s;
+  pointer-events: none; /* Prevent icon from interfering with header click */
+}
+
+.driver-header:hover .edit-driver-icon {
+  opacity: 1;
+}
+
+.driver-header:hover .edit-driver-icon:hover {
   color: #495057;
 }
 
