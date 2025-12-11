@@ -4,6 +4,8 @@ import GetPolly from '../../components/GetPolly.vue'
 import FAQ from '../../components/FAQ.vue'
 import AboutPage from '../../components/AboutPage.vue'
 import SupportPage from '../../components/SupportPage.vue'
+import PrivacyPage from '../../components/PrivacyPage.vue'
+import CookiePolicyPage from '../../components/CookiePolicyPage.vue'
 
 const routes = [
   {
@@ -31,6 +33,16 @@ const routes = [
     path: '/support',
     name: 'SupportPage',
     component: SupportPage
+  },
+    {
+    path: '/privacy',
+    name: 'Privacy',
+    component: PrivacyPage
+  },
+  {
+    path: '/cookie-policy',
+    name: 'CookiePolicy',
+    component: CookiePolicyPage
   }
 ]
 
