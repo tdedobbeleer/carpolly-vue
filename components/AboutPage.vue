@@ -5,7 +5,7 @@
       <BCard bg-variant="light" class="parrot-card">
         <p class="lead">
           CarPolly is a fun and easy way to organize carpools for events. Whether you're planning a trip to the ice rink,
-          a concert, or any group outing, Carpollies helps you coordinate rides with your friends and fellow "parrots".
+          a concert, or any group outing, CarPolly helps you coordinate rides with your friends and fellow "parrots".
         </p>
         <p>
           Inspired by the social nature of parrots, CarPolly makes sharing rides as natural as a flock taking flight together.

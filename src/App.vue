@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { BNavbar, BContainer, BApp, BNav, BNavItem, BNavbarBrand } from 'bootstrap-vue-next'
+import CookieBanner from '../components/CookieBanner.vue'
 // import { NotificationService } from '../services/notificationService'
 
 // Initialize notification service when app starts
@@ -26,6 +27,10 @@ import { BNavbar, BContainer, BApp, BNav, BNavItem, BNavbarBrand } from 'bootstr
         </BContainer>
         <footer class="text-center mt-5 p-3">
             <p>Created by Tom De Dobbeleer with a bit of <i class="bi bi-heart"></i> from <a href="https://kilocode.ai" target="_blank">Kilo AI assistant</a>.</p>
+            <div class="mb-3">
+              <router-link to="/privacy" class="me-3">Privacy Policy</router-link>
+              <router-link to="/cookie-policy">Cookie Policy</router-link>
+            </div>
             <div class="d-flex justify-content-center align-items-center gap-3">
               <a href="https://github.com/tomdedobbeleer/carpolly-vue" target="_blank" rel="noopener noreferrer" title="View on GitHub">
                 <i class="bi bi-github fs-2"></i>
@@ -35,6 +40,7 @@ import { BNavbar, BContainer, BApp, BNav, BNavItem, BNavbarBrand } from 'bootstr
               </a>
             </div>
         </footer>
+        <CookieBanner />
   </BApp>
 </template>
 
