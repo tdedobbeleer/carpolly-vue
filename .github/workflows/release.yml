@@ -8,9 +8,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm ci && npm run build
+      - name: Create release zip
+        run: zip -r -q release.zip dist
       - uses: softprops/action-gh-release@v1
         with:
-          files: dist/**
+          files: release.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: FirebaseExtended/action-hosting-deploy@v0
