@@ -1,5 +1,5 @@
 <template>
-  <BModal ref="modal" title="Add Driver" @ok="onSubmit($event)">
+  <BModal ref="modal" title="Add Driver" @ok="onSubmit($event)" @shown="prefillFormFields">
     <BForm>
       <BFormGroup label="Who will drive?" label-for="name">
         <BFormInput
@@ -46,11 +46,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps, defineEmits, useTemplateRef } from 'vue'
+import { ref, useTemplateRef } from 'vue'
 import { BModal, BForm, BFormGroup, BFormInput } from 'bootstrap-vue-next'
 import type { BvTriggerableEvent } from 'bootstrap-vue-next'
 import { dataService } from '../services/dataService'
 import { ValidationService } from '../services/validationService'
+import { useUserProfile } from '../src/composables/useUserProfile'
+import { useDriverDefaults } from '../src/composables/useDriverDefaults'
 import type { Polly } from '../models/polly.model'
 import type { Driver } from '../models/driver.model'
 
@@ -71,6 +73,30 @@ const spots = ref(1)
 const nameError = ref('')
 const descriptionError = ref('')
 const spotsError = ref('')
+
+// Use the user profile and driver defaults composables
+const { userProfile } = useUserProfile()
+const { driverDefaults } = useDriverDefaults()
+
+// Pre-fill form fields when modal opens
+const prefillFormFields = () => {
+  // Pre-fill name from user profile if available
+  if (userProfile.value.name && !name.value) {
+    name.value = userProfile.value.name
+  }
+
+  // Pre-fill description from driver defaults if available
+  if (driverDefaults.value.description && !description.value) {
+    description.value = driverDefaults.value.description
+  }
+
+  // Pre-fill spots from driver defaults if available
+  if (driverDefaults.value.spots && spots.value === 1) {
+    spots.value = driverDefaults.value.spots
+  }
+}
+
+
 
 const resetNameError = () => {
   nameError.value = ''

@@ -76,6 +76,28 @@ export class ValidationService {
   }
 
   /**
+   * Validates user profile name (optional field)
+   */
+  static validateOptionalName(name: string): { isValid: boolean; error?: string } {
+    const sanitized = this.sanitizeText(name);
+
+    // Empty names are allowed for user profile
+    if (!sanitized) {
+      return { isValid: true };
+    }
+
+    if (sanitized.length > this.MAX_NAME_LENGTH) {
+      return { isValid: false, error: `Name must be ${this.MAX_NAME_LENGTH} characters or less` };
+    }
+
+    if (!this.NAME_PATTERN.test(sanitized)) {
+      return { isValid: false, error: 'Name contains invalid characters. Only letters, spaces, hyphens, and apostrophes are allowed' };
+    }
+
+    return { isValid: true };
+  }
+
+  /**
    * Validates driver description/meeting details
    */
   static validateDescription(description: string): { isValid: boolean; error?: string } {

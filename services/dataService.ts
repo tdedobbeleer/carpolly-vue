@@ -19,6 +19,11 @@ import type { Consumer } from '../models/consumer.model'
 class DataService {
   private pollyCollection = 'pollies'
 
+  private async updatePollyTimestamp(pollyId: string) {
+    const docRef = doc(db, this.pollyCollection, pollyId)
+    await updateDoc(docRef, { updatedAt: serverTimestamp() })
+  }
+
   async createPolly(id: string, polly: Polly) {
     // Validate UUID format
     const uuidValidation = ValidationService.validateUUID(id)
@@ -37,7 +42,7 @@ class DataService {
 
     const docRef = doc(db, this.pollyCollection, id)
     const { drivers, consumers, ...pollyData } = polly
-    const data = { ...pollyData, created: serverTimestamp() }
+    const data = { ...pollyData, created: serverTimestamp(), updatedAt: serverTimestamp() }
     await setDoc(docRef, data, { merge: false })
 
     if (drivers && drivers.length > 0) {
@@ -79,7 +84,7 @@ class DataService {
       const waitingListCollection = collection(docRef, 'consumers')
       const waitingListSnap = await getDocs(waitingListCollection)
       const consumers = waitingListSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Consumer[]
-      return { ...data, created: data.created?.toDate(), drivers, consumers } as Polly
+      return { ...data, created: data.created?.toDate(), updatedAt: data.updatedAt?.toDate(), drivers, consumers } as Polly
     } else {
       throw new Error('Polly not found')
     }
@@ -92,6 +97,8 @@ class DataService {
     if (Object.keys(pollyData).length > 0) {
       await setDoc(docRef, pollyData, { merge: true })
     }
+    // Update the timestamp
+    await this.updatePollyTimestamp(id)
   }
 
   async createDriver(pollyId: string, driver: Driver) {
@@ -120,6 +127,9 @@ class DataService {
       }
     }
 
+    // Update polly timestamp
+    await this.updatePollyTimestamp(pollyId)
+
     return driverDocRef.id
   }
 
@@ -132,12 +142,18 @@ class DataService {
 
     // Update driver timestamp to trigger subscription
     await updateDoc(driverDocRef, { lastUpdated: serverTimestamp() })
+
+    // Update polly timestamp
+    await this.updatePollyTimestamp(pollyId)
   }
 
   async deleteDriver(pollyId: string, driverId: string) {
     const pollyDocRef = doc(db, this.pollyCollection, pollyId)
     const driverDocRef = doc(collection(pollyDocRef, 'drivers'), driverId)
     await deleteDoc(driverDocRef)
+
+    // Update polly timestamp
+    await this.updatePollyTimestamp(pollyId)
   }
 
   async createConsumer(pollyId: string, driverId: string, consumer: Consumer) {
@@ -159,6 +175,10 @@ class DataService {
     const driverDocRef = doc(collection(pollyDocRef, 'drivers'), driverId)
     const consumersCollection = collection(driverDocRef, 'consumers')
     const consumerDocRef = await addDoc(consumersCollection, consumer)
+
+    // Update polly timestamp
+    await this.updatePollyTimestamp(pollyId)
+
     return consumerDocRef.id
   }
 
@@ -166,11 +186,13 @@ class DataService {
     const pollyDocRef = doc(db, this.pollyCollection, pollyId)
     const driverDocRef = doc(collection(pollyDocRef, 'drivers'), driverId)
     const consumerDocRef = doc(collection(driverDocRef, 'consumers'), consumerId)
+
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { id: _, ...consumerData } = consumer
+    const { id: _unused, ...consumerData } = consumer
     await updateDoc(consumerDocRef, consumerData)
+
+    // Update polly timestamp
+    await this.updatePollyTimestamp(pollyId)
   }
 
   async deleteConsumer(pollyId: string, driverId: string, consumerId: string) {
@@ -178,6 +200,9 @@ class DataService {
     const driverDocRef = doc(collection(pollyDocRef, 'drivers'), driverId)
     const consumerDocRef = doc(collection(driverDocRef, 'consumers'), consumerId)
     await deleteDoc(consumerDocRef)
+
+    // Update polly timestamp
+    await this.updatePollyTimestamp(pollyId)
   }
 
   async createWaitingListConsumer(pollyId: string, consumer: Consumer) {
@@ -196,6 +221,10 @@ class DataService {
     const pollyDocRef = doc(db, this.pollyCollection, pollyId)
     const waitingListCollection = collection(pollyDocRef, 'consumers')
     const consumerDocRef = await addDoc(waitingListCollection, consumer)
+
+    // Update polly timestamp
+    await this.updatePollyTimestamp(pollyId)
+
     return consumerDocRef.id
   }
 
@@ -203,8 +232,12 @@ class DataService {
     const pollyDocRef = doc(db, this.pollyCollection, pollyId)
     const waitingListCollection = collection(pollyDocRef, 'consumers')
     const consumerDocRef = doc(waitingListCollection, consumerId)
-    const { id: _, ...consumerData } = consumer
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id: _unused, ...consumerData } = consumer
     await updateDoc(consumerDocRef, consumerData)
+
+    // Update polly timestamp
+    await this.updatePollyTimestamp(pollyId)
   }
 
   async deleteWaitingListConsumer(pollyId: string, consumerId: string) {
@@ -212,6 +245,9 @@ class DataService {
     const waitingListCollection = collection(pollyDocRef, 'consumers')
     const consumerDocRef = doc(waitingListCollection, consumerId)
     await deleteDoc(consumerDocRef)
+
+    // Update polly timestamp
+    await this.updatePollyTimestamp(pollyId)
   }
 
   subscribeToPolly(id: string, callback: (polly: Polly | null) => void) {
@@ -239,7 +275,7 @@ class DataService {
                 return { id: d.id, ...d.data(), consumers: otherConsumers } as Driver
               }
             })).then(finalDrivers => {
-              callback({ ...data, created: data.created?.toDate(), drivers: finalDrivers, consumers } as Polly)
+              callback({ ...data, created: data.created?.toDate(), updatedAt: data.updatedAt?.toDate(), drivers: finalDrivers, consumers } as Polly)
             })
           })
           // For initial load, get consumers synchronously
@@ -247,7 +283,7 @@ class DataService {
           const driverConsumers = consumersSnap.docs.map(consumerDoc => ({ id: consumerDoc.id, ...consumerDoc.data() }))
           return { id: driverDoc.id, ...driverDoc.data(), consumers: driverConsumers } as Driver
         }))
-        callback({ ...data, created: data.created?.toDate(), drivers, consumers } as Polly)
+        callback({ ...data, created: data.created?.toDate(), updatedAt: data.updatedAt?.toDate(), drivers, consumers } as Polly)
       } else {
         callback(null)
       }

@@ -96,6 +96,9 @@ const loadPreviousPollys = () => {
         created: new Date() // Placeholder date
       }))
 
+      // Check each polly and remove non-existent ones
+      checkAndCleanPollyList(pollyIds)
+
       // Optionally fetch real data for each polly
       pollyIds.forEach(async (id) => {
         try {
@@ -111,8 +114,9 @@ const loadPreviousPollys = () => {
             }
           }
         } catch (error) {
-          // Keep placeholder data if fetch fails
-          console.warn(`Could not fetch polly ${id}:`, error)
+          // Remove non-existent polly from localStorage and list
+          console.warn(`Polly ${id} no longer exists, removing from list:`, error)
+          removeNonExistentPolly(id)
         }
       })
     }
@@ -131,6 +135,56 @@ const formatDate = (date: Date) => {
     month: 'short',
     day: 'numeric'
   }).format(new Date(date))
+}
+
+const checkAndCleanPollyList = async (pollyIds: string[]) => {
+  try {
+    const validPollyIds: string[] = []
+
+    // Check each polly ID to see if it still exists
+    for (const pollyId of pollyIds) {
+      try {
+        await dataService.getPolly(pollyId)
+        validPollyIds.push(pollyId) // Polly exists, keep it
+      } catch {
+        console.log(`Removing non-existent polly from history: ${pollyId}`)
+        // Polly doesn't exist, don't add to valid list (effectively removing it)
+      }
+    }
+
+    // Update localStorage with only valid polly IDs
+    if (validPollyIds.length !== pollyIds.length) {
+      localStorage.setItem('carpolly_created_pollies', JSON.stringify(validPollyIds))
+      // Update the local list to reflect cleaned data
+      previousPollys.value = validPollyIds.map(id => ({
+        id,
+        description: `Polly ${id.slice(0, 8)}...`,
+        created: new Date()
+      }))
+    }
+  } catch (error) {
+    console.error('Error cleaning polly list:', error)
+  }
+}
+
+const removeNonExistentPolly = (pollyId: string) => {
+  try {
+    // Remove from local list
+    const index = previousPollys.value.findIndex(p => p.id === pollyId)
+    if (index !== -1) {
+      previousPollys.value.splice(index, 1)
+    }
+
+    // Remove from localStorage
+    const stored = localStorage.getItem('carpolly_created_pollies')
+    if (stored) {
+      const pollyIds = JSON.parse(stored) as string[]
+      const updatedIds = pollyIds.filter(id => id !== pollyId)
+      localStorage.setItem('carpolly_created_pollies', JSON.stringify(updatedIds))
+    }
+  } catch (error) {
+    console.error('Error removing non-existent polly:', error)
+  }
 }
 
 const clearHistory = () => {

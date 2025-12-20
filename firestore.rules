@@ -7,7 +7,8 @@ service cloud.firestore {
         && polly.description is string
         && polly.description.trim().size() > 0
         && polly.description.size() <= 60
-        && polly.created is timestamp;
+        && polly.created is timestamp
+        && (!polly.keys().hasAny(['updatedAt']) || (polly.updatedAt is timestamp));
     }
 
     function isValidDriver(driver) {

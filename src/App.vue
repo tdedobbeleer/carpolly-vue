@@ -20,6 +20,7 @@ import CookieBanner from '../components/CookieBanner.vue'
             <BNavItem to="/faq">FAQ</BNavItem>
             <BNavItem to="/support">Support</BNavItem>
             <BNavItem to="/about">About</BNavItem>
+            <BNavItem to="/settings">Settings</BNavItem>
           </BNav>
         </BNavbar>
         <BContainer>

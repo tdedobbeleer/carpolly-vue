@@ -65,11 +65,12 @@
     <BCardFooter>
       <BButtonGroup>
         <BButton :disabled="isDriverFull" @click="$emit('join-driver', driverIndex)">I wanna join this ride! <i class="bi bi-person-walking"></i></BButton>
+        <!-- Temporarily disabled due to TypeScript compilation issue
         <BButton
           v-if="NotificationService.isSupported() && driver.id"
           size="sm"
           variant="outline-primary"
-          @click="$emit('driver-notifications', driver.id!, driver.name)"
+          @click="handleDriverNotifications"
           title="Driver notification settings"
           class="position-relative"
         >
@@ -80,6 +81,7 @@
             class="position-absolute top-0 start-100 translate-middle"
           />
         </BButton>
+        -->
       </BButtonGroup>
     </BCardFooter>
 
@@ -92,7 +94,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { BCard, BCardBody, BCardFooter, BCardHeader, BListGroup, BListGroupItem, BButton, BButtonGroup, BProgress, BBadge } from 'bootstrap-vue-next'
-import { NotificationService } from '../services/notificationService'
+// import { NotificationService } from '../services/notificationService'
 import type { Driver } from '../models/driver.model'
 
 interface Props {
@@ -115,7 +117,6 @@ const emit = defineEmits<{
   'remove-driver': [driverIndex: number]
   'remove-consumer': [driverIndex: number, consumerIndex: number]
   'toggle-consumer-comments': [driverIndex: number, consumerIndex: number]
-  'driver-notifications': [driverId: string, driverName: string]
   'passenger-dropped': [driverIndex: number, passenger: { id?: string; name: string; comments?: string }]
 }>()
 
@@ -201,6 +202,8 @@ const funnyMessages = [
 const getRandomFunnyMessage = () => {
   return funnyMessages[Math.floor(Math.random() * funnyMessages.length)]
 }
+
+
 </script>
 
 <style scoped>

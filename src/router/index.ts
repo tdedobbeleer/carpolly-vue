@@ -6,6 +6,7 @@ import AboutPage from '../../components/AboutPage.vue'
 import SupportPage from '../../components/SupportPage.vue'
 import PrivacyPage from '../../components/PrivacyPage.vue'
 import CookiePolicyPage from '../../components/CookiePolicyPage.vue'
+import SettingsPage from '../../components/SettingsPage.vue'
 
 const routes = [
   {
@@ -43,6 +44,11 @@ const routes = [
     path: '/cookie-policy',
     name: 'CookiePolicy',
     component: CookiePolicyPage
+  },
+  {
+    path: '/settings',
+    name: 'SettingsPage',
+    component: SettingsPage
   }
 ]
 

@@ -1,5 +1,5 @@
 <template>
-  <BModal :model-value="modelValue" :title="mode === 'waitingList' ? 'Join waiting list' : 'Join Driver'" @ok="onSubmit($event)">
+  <BModal :model-value="props.modelValue" :title="props.mode === 'waitingList' ? 'Join waiting list' : 'Join Driver'" @ok="onSubmit($event)" @shown="prefillNameField">
     <BForm>
       <BFormGroup label="Your Name:" label-for="consumerName">
         <BFormInput
@@ -30,8 +30,9 @@ import { ref } from 'vue'
 import { BModal, BForm, BFormGroup, BFormInput, BFormTextarea } from 'bootstrap-vue-next'
 import { BvTriggerableEvent } from 'bootstrap-vue-next'
 import { ValidationService } from '../services/validationService'
+import { useUserProfile } from '../src/composables/useUserProfile'
 
-defineProps<{
+const props = defineProps<{
   modelValue: boolean
   mode?: 'driver' | 'waitingList'
 }>()
@@ -41,9 +42,19 @@ const emit = defineEmits<{
   'consumer-added': [consumer: { name: string; comments: string }]
 }>()
 
+// Use the user profile composable
+const { userProfile } = useUserProfile()
+
 const consumerName = ref('')
 const consumerComments = ref('')
 const nameError = ref('')
+
+// Pre-fill name field when modal opens
+const prefillNameField = () => {
+  if (userProfile.value.name && !consumerName.value) {
+    consumerName.value = userProfile.value.name
+  }
+}
 
 const resetNameError = () => {
   nameError.value = ''
