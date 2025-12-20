@@ -190,6 +190,7 @@
               :is-updating="updatingDrivers.has(index)"
               :expanded-consumer-items="expandedItems.get(index) || new Set()"
               :driver-subscriptions="driverSubscriptions"
+              :waiting-list-consumers="polly.consumers"
               @edit-driver="openEditDriverModal"
               @join-driver="openJoinModal"
               @remove-driver="confirmRemove"

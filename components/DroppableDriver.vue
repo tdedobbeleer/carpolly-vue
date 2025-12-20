@@ -37,7 +37,7 @@
     </BCardHeader>
 
     <BCardBody>
-      <div class="drop-zone-hint mb-2" v-if="!isDriverFull">
+      <div class="drop-zone-hint mb-2" v-if="shouldShowDropHint">
         <small class="text-muted">
           <i class="bi bi-arrow-down-circle"></i> Drop passengers here
         </small>
@@ -96,6 +96,7 @@ import { computed, ref } from 'vue'
 import { BCard, BCardBody, BCardFooter, BCardHeader, BListGroup, BListGroupItem, BButton, BButtonGroup, BProgress, BBadge } from 'bootstrap-vue-next'
 // import { NotificationService } from '../services/notificationService'
 import type { Driver } from '../models/driver.model'
+import type { Consumer } from '../models/consumer.model'
 
 interface Props {
   driver: Driver
@@ -103,12 +104,14 @@ interface Props {
   isUpdating?: boolean
   expandedConsumerItems?: Set<number>
   driverSubscriptions?: Record<string, boolean>
+  waitingListConsumers?: Consumer[]
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isUpdating: false,
   expandedConsumerItems: () => new Set(),
-  driverSubscriptions: () => ({})
+  driverSubscriptions: () => ({}),
+  waitingListConsumers: () => []
 })
 
 const emit = defineEmits<{
@@ -124,6 +127,14 @@ const isDragOver = ref(false)
 
 const isDriverFull = computed(() => {
   return (props.driver.consumers?.length || 0) >= (props.driver.spots || 0)
+})
+
+const hasWaitingListConsumers = computed(() => {
+  return props.waitingListConsumers && props.waitingListConsumers.length > 0
+})
+
+const shouldShowDropHint = computed(() => {
+  return !isDriverFull.value && hasWaitingListConsumers.value
 })
 
 const onDragOver = (event: DragEvent) => {
