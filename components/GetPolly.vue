@@ -13,171 +13,238 @@
         </div>
       </div>
       <div v-else>
-      <BRow align-items="center" class="mb-2">
-        <BCol xs="6">
-          <div class="editable-title-container d-flex align-items-center" @mouseenter="showEditIcon = true" @mouseleave="showEditIcon = false">
-            <h1 v-if="!isEditingTitle" @click="startEditingTitle" class="editable-title">{{ polly?.description }}</h1>
-            <div v-else class="d-flex align-items-center">
-              <input
-                ref="titleInput"
-                v-model="editingTitle"
-                @keyup.enter="saveTitle"
-                @keyup.escape="cancelEditingTitle"
-                @input="resetTitleError"
-                :class="{ 'form-control': true, 'form-control-lg': true, 'me-2': true, 'is-invalid': titleError }"
-                type="text"
-                maxlength="60"
-                required
-              />
-              <div v-if="titleError" class="invalid-feedback d-block">
-                {{ titleError }}
+        <BRow align-items="center" class="mb-2">
+          <BCol xs="6">
+            <div
+              class="editable-title-container d-flex align-items-center"
+              @mouseenter="showEditIcon = true"
+              @mouseleave="showEditIcon = false"
+            >
+              <h1
+                v-if="!isEditingTitle"
+                @click="startEditingTitle"
+                class="editable-title"
+              >
+                {{ polly?.description }}
+              </h1>
+              <div v-else class="d-flex align-items-center">
+                <input
+                  ref="titleInput"
+                  v-model="editingTitle"
+                  @keyup.enter="saveTitle"
+                  @keyup.escape="cancelEditingTitle"
+                  @input="resetTitleError"
+                  :class="{
+                    'form-control': true,
+                    'form-control-lg': true,
+                    'me-2': true,
+                    'is-invalid': titleError
+                  }"
+                  type="text"
+                  maxlength="60"
+                  required
+                />
+                <div v-if="titleError" class="invalid-feedback d-block">
+                  {{ titleError }}
+                </div>
+                <BButton
+                  @click="saveTitle"
+                  variant="success"
+                  size="sm"
+                  class="d-block d-md-none"
+                >
+                  <i class="bi bi-check"></i>
+                </BButton>
               </div>
-              <BButton @click="saveTitle" variant="success" size="sm" class="d-block d-md-none">
-                <i class="bi bi-check"></i>
+              <i
+                v-if="!isEditingTitle && showEditIcon"
+                class="bi bi-pencil edit-icon ms-2"
+                title="Edit title"
+              ></i>
+            </div>
+          </BCol>
+        </BRow>
+
+        <BRow>
+          <BCol xs="6">
+            <div class="d-flex gap-2">
+              <BButton
+                size="sm"
+                variant="outline-primary"
+                @click="shareOnWhatsApp"
+                title="Share on WhatsApp"
+              >
+                <i class="bi bi-whatsapp"></i>
+              </BButton>
+              <BButton
+                size="sm"
+                variant="outline-primary"
+                @click="shareOnTelegram"
+                title="Share on Telegram"
+              >
+                <i class="bi bi-telegram"></i>
+              </BButton>
+              <BButton
+                size="sm"
+                variant="outline-primary"
+                @click="shareOnSignal"
+                title="Share on Signal"
+              >
+                Signal
+              </BButton>
+              <BButton
+                size="sm"
+                variant="outline-primary"
+                @click="shareViaSMS"
+                title="Share via SMS"
+              >
+                <i class="bi bi-chat-dots"></i>
               </BButton>
             </div>
-            <i v-if="!isEditingTitle && showEditIcon" class="bi bi-pencil edit-icon ms-2" title="Edit title"></i>
-          </div>
-        </BCol>
+          </BCol>
+          <BCol xs="6" class="text-end">
+            <BButton
+              v-if="NotificationService.isSupported()"
+              size="sm"
+              variant="outline-primary"
+              @click="showNotificationSettings"
+              title="Notification settings"
+              class="position-relative"
+            >
+              <i class="bi bi-bell"></i>
+              <BBadge
+                v-if="isSubscribedToPolly"
+                dot-indicator
+                variant="success"
+                class="position-absolute top-0 start-100 translate-middle"
+              />
+            </BButton>
+          </BCol>
         </BRow>
+
+        <!-- Waiting List Section -->
+        <BRow v-if="!isLoading && polly?.consumers?.length">
+          <div class="d-flex m-3">
+            <h3>Waiting list</h3>
+          </div>
+
+          <BCol md="6" offset-md="3">
+            <div class="list-group">
+              <DraggablePassenger
+                v-for="(consumer, index) in polly.consumers"
+                :key="consumer.id || index"
+                :passenger="{
+                  id: consumer.id,
+                  name: consumer.name || '',
+                  comments: consumer.comments
+                }"
+                :passenger-index="index"
+                :expanded="expandedWaitingListItems.has(index)"
+                @toggle-comments="toggleWaitingListExpanded"
+                @remove="confirmRemoveWaitingListConsumer"
+                @drag-start="onPassengerDragStart"
+                @drag-end="onPassengerDragEnd"
+              />
+            </div>
+          </BCol>
+        </BRow>
+
+        <!-- Drivers Section -->
         <BRow>
-        <BCol xs="6">
-          <div class="d-flex gap-2">
-            <BButton size="sm" variant="outline-primary" @click="shareOnWhatsApp" title="Share on WhatsApp">
-              <i class="bi bi-whatsapp"></i>
+          <div class="d-flex m-3">
+            <h2>Drivers and spots available</h2>
+            <BButton class="ms-auto" @click="addDriverModal?.show()">
+              I'm a driver! <span class="bi bi-car-front-fill"></span>
             </BButton>
-            <BButton size="sm" variant="outline-primary" @click="shareOnTelegram" title="Share on Telegram">
-              <i class="bi bi-telegram"></i>
-            </BButton>
-            <BButton size="sm" variant="outline-primary" @click="shareOnSignal" title="Share on Signal">
-              Signal
-            </BButton>
-            <BButton size="sm" variant="outline-primary" @click="shareViaSMS" title="Share via SMS">
-              <i class="bi bi-chat-dots"></i>
+            <BButton
+              v-if="canJoinWaitingList"
+              @click="openWaitingListJoinModal"
+              class="ms-2"
+              variant="outline-primary"
+            >
+              I'm a passenger! <i class="bi bi-person-walking"></i>
             </BButton>
           </div>
-        </BCol>
-        <BCol xs="6" class="text-end">
-          <BButton
-            v-if="NotificationService.isSupported()"
-            size="sm"
-            variant="outline-primary"
-            @click="showNotificationSettings"
-            title="Notification settings"
-            class="position-relative"
+        </BRow>
+
+        <BRow v-if="!polly?.drivers?.length">
+          <BCol class="mb-3" md="6" offset-md="3">
+            <BCard class="border-info shadow text-center parrot-card">
+              <p>
+                No drivers yet! Be a good parrot and offer a ride
+                <i class="bi bi-emoji-smile-upside-down"></i>
+              </p>
+            </BCard>
+          </BCol>
+        </BRow>
+
+        <BRow v-else class="row-cols-1 row-cols-md-2 g-4">
+          <BCol
+            class="car-bcol"
+            v-for="(driver, index) in polly?.drivers"
+            :key="index"
           >
-            <i class="bi bi-bell"></i>
-            <BBadge v-if="isSubscribedToPolly"
-              dot-indicator
-              variant="success"
-              class="position-absolute top-0 start-100 translate-middle"
+            <DroppableDriver
+              :driver="driver"
+              :driver-index="index"
+              :is-updating="updatingDrivers.has(index)"
+              :expanded-consumer-items="expandedItems.get(index) || new Set()"
+              :driver-subscriptions="driverSubscriptions"
+              @edit-driver="openEditDriverModal"
+              @join-driver="openJoinModal"
+              @remove-driver="confirmRemove"
+              @remove-consumer="confirmRemoveConsumer"
+              @toggle-consumer-comments="toggleExpanded"
+              @driver-notifications="showDriverNotificationSettings"
+              @passenger-dropped="onPassengerDropped"
             />
-          </BButton>
-        </BCol>
-      </BRow>
-      <div class="d-flex m-3">
-        <h2>Drivers and spots available</h2>
-        <BButton class="ms-auto" @click="addDriverModal?.show()">I'm a driver! <span class="bi bi-car-front-fill"></span></BButton>
-      </div>
-      <BRow v-if="!polly?.drivers?.length">
-        <BCol class="mb-3" md="6" offset-md="3">
-          <BCard class="border-info shadow text-center parrot-card">
-            <p>No drivers yet! Be a good parrot and offer a ride <i class="bi bi-emoji-smile-upside-down"></i></p>
-          </BCard>
-        </BCol>
-      </BRow>
-      <BRow v-else class="row-cols-1 row-cols-md-2 g-4">
-        <BCol class="car-bcol" v-for="(driver, index) in polly?.drivers" :key="index">
-          <BCard class="border-info shadow car-card h-100 position-relative" :class="getDynamicParrotClass(index+1)">
-            <div v-if="updatingDrivers.has(index)" class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-flex align-items-center justify-content-center" style="z-index: 10;">
-              <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-              </div>
-            </div>
-            <BCardHeader class="driver-header position-relative" @click="openEditDriverModal(driver)">
-              <div class="text-center">
-                <BButton variant="primary" size="lg" disabled class="position-relative">
-                  <i class="bi bi-car-front"></i>
-                  <BBadge
-                    variant="info"
-                    pill
-                    class="position-absolute top-0 start-100 translate-middle"
-                  >
-                    {{ driver.spots || 0 }}
-                    <span class="visually-hidden">Total spots</span>
-                  </BBadge>
-                </BButton>
-                <div>{{ driver.name }}</div>
-              </div>
-              <p>When & where?<br/>{{ driver.description }}</p>
-              <BProgress
-                class="mb-3"
-                :variant="getProgressVariant(driver.consumers?.length || 0, driver.spots || 0)"
-                :value="countProgress(driver.consumers?.length || 0, driver.spots || 0)"/>
-              <p v-if="(driver.consumers?.length || 0) >= (driver.spots || 0)" class="text-danger mb-3">All spots are filled!<br/>{{ getRandomFunnyMessage() }}</p>
-              <i class="bi bi-pencil edit-driver-icon position-absolute top-0 end-0 m-2" title="Edit driver"></i>
-            </BCardHeader>
-            <BCardBody>
-              <BListGroup v-if="driver.consumers?.length && driver.consumers?.length > 0">
-                <BListGroupItem v-for="(consumer, consumerIndex) in driver.consumers" :key="consumerIndex" button>
-                  {{ consumer.name }}
-                  <div class="float-end">
-                    <BButton v-if="consumer.comments" class="btn-sm me-1" @click="toggleExpanded(index, consumerIndex)">
-                      <i class="bi bi-chat-left-text"></i>
-                    </BButton>
-                    <BButton class="btn-sm" variant="outline-danger" @click="confirmRemoveConsumer(index, consumerIndex)">
-                      <i class="bi bi-trash3"></i>
-                    </BButton>
-                  </div>
-                  <div v-if="expandedItems.get(index)?.has(consumerIndex) && consumer.comments" class="mt-2">
-                    <i>{{ consumer.comments }}</i>
-                  </div>
-                </BListGroupItem>
-              </BListGroup>
-              <p v-else>No passengers yet. <i class="bi bi-emoji-frown"></i></p>
-            </BCardBody>
-            <BCardFooter>
-              <BButtonGroup>
-                <BButton :disabled="!!(driver.consumers?.length && driver.consumers?.length === driver.spots)" @click="openJoinModal(index)">I wanna join this ride! <i class="bi bi-person-walking"></i></BButton>
-                <BButton
-                  v-if="NotificationService.isSupported() && driver.id"
-                  size="sm"
-                  variant="outline-primary"
-                  @click="showDriverNotificationSettings(driver.id!, driver.name)"
-                  title="Driver notification settings"
-                  class="position-relative"
-                >
-                  <i class="bi bi-bell"></i>
-                  <BBadge v-if="driverSubscriptions[driver.id]"
-                    dot-indicator
-                    variant="success"
-                    class="position-absolute top-0 start-100 translate-middle"
-                  />
-                </BButton>
-              </BButtonGroup>
-            </BCardFooter>
-            <div class="d-grid mt-2">
-                <BButton @click="confirmRemove(index)" class="bg-danger btn-sm"><i class="bi bi-trash3"></i></BButton>
-            </div>
-          </BCard>
-        </BCol>
-      </BRow>
+          </BCol>
+        </BRow>
       </div>
     </BCol>
 
-    <AddDriverModal ref="addDriverModal" :polly="polly" :id="id" @driver-added="onDriverAdded" />
+    <!-- Modals -->
+    <AddDriverModal
+      ref="addDriverModal"
+      :polly="polly"
+      :id="id"
+      @driver-added="onDriverAdded"
+    />
 
     <BModal v-model="showRemoveModal" title="Confirm Removal" @ok="removeDriver">
       <p>Are you sure you want to remove this driver?</p>
     </BModal>
 
-    <BModal v-model="showRemoveConsumerModal" title="Confirm Removal" @ok="removeConsumer">
+    <BModal
+      v-model="showRemoveConsumerModal"
+      title="Confirm Removal"
+      @ok="removeConsumer"
+    >
       <p>Are you sure you want to remove this passenger?</p>
     </BModal>
 
-    <AddConsumerModal v-model="showJoinModal" @consumer-added="onConsumerAdded" />
+    <BModal
+      v-model="showRemoveWaitingListConsumerModal"
+      title="Confirm Removal"
+      @ok="removeWaitingListConsumer"
+    >
+      <p>
+        Are you sure you want to remove this passenger from the waiting list?
+      </p>
+    </BModal>
 
-    <EditConsumerModal ref="editConsumerModal" :driver="currentEditingDriver" :polly-id="id" @driver-updated="onDriverUpdated" />
+    <AddConsumerModal
+      v-model="showJoinModal"
+      :mode="joinMode"
+      @consumer-added="onConsumerAdded"
+    />
+
+    <EditConsumerModal
+      ref="editConsumerModal"
+      :driver="currentEditingDriver"
+      :polly-id="id"
+      @driver-updated="onDriverUpdated"
+    />
 
     <NotificationSettingsModal
       v-model="showNotificationModal"
@@ -192,13 +259,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick, useTemplateRef, watchEffect } from 'vue'
+import {
+  ref,
+  onMounted,
+  onUnmounted,
+  nextTick,
+  useTemplateRef,
+  watchEffect,
+  computed
+} from 'vue'
 import { useRoute } from 'vue-router'
-import { BButton, BButtonGroup, BProgress, BModal, BCard, BCardBody, BCardFooter, BCardHeader, BCol, BRow, BListGroup, BListGroupItem, BBadge } from 'bootstrap-vue-next'
+import {
+  BButton,
+  BModal,
+  BCol,
+  BRow,
+  BBadge,
+  BCard
+} from 'bootstrap-vue-next'
 import AddDriverModal from './AddDriverModal.vue'
 import AddConsumerModal from './AddConsumerModal.vue'
 import EditConsumerModal from './EditConsumerModal.vue'
 import NotificationSettingsModal from './NotificationSettingsModal.vue'
+import DraggablePassenger from './DraggablePassenger.vue'
+import DroppableDriver from './DroppableDriver.vue'
 import { dataService } from '../services/dataService'
 import { ValidationService } from '../services/validationService'
 import { NotificationService } from '../services/notificationService'
@@ -231,6 +315,22 @@ const currentDriverId = ref('')
 const currentDriverName = ref('')
 const currentEditingDriver = ref<Driver | null>(null)
 
+const expandedWaitingListItems = ref<Set<number>>(new Set())
+
+const showRemoveWaitingListConsumerModal = ref(false)
+
+const waitingListConsumerIndex = ref(-1)
+
+const joinMode = ref<'driver' | 'waitingList'>('driver')
+
+const canJoinWaitingList = computed(
+  () =>
+    !polly.value?.drivers?.length ||
+    polly.value.drivers.every(
+      (d) => (d.consumers?.length || 0) >= (d.spots || 0)
+    )
+)
+
 // Reactive notification states
 const notificationState = ref(0)
 
@@ -240,12 +340,19 @@ const driverSubscriptions = ref<Record<string, boolean>>({})
 
 // Load initial subscription states
 const loadSubscriptionStates = async () => {
-  isSubscribedToPolly.value = await NotificationService.isSubscribedToPolly(id.value)
+  isSubscribedToPolly.value = await NotificationService.isSubscribedToPolly(
+    id.value
+  )
+
   // Load driver subscriptions for current drivers
   if (polly.value?.drivers) {
     for (const driver of polly.value.drivers) {
       if (driver.id) {
-        driverSubscriptions.value[driver.id] = await NotificationService.isSubscribedToDriverPassengers(id.value, driver.id)
+        driverSubscriptions.value[driver.id] =
+          await NotificationService.isSubscribedToDriverPassengers(
+            id.value,
+            driver.id
+          )
       }
     }
   }
@@ -270,9 +377,11 @@ onMounted(() => {
   })
 
   // Subscribe to notification changes
-  const unsubscribeNotifications = NotificationService.onSubscriptionChange(() => {
-    notificationState.value++
-  })
+  const unsubscribeNotifications = NotificationService.onSubscriptionChange(
+    () => {
+      notificationState.value++
+    }
+  )
 
   // Cleanup function for notifications
   const originalUnsubscribe = unsubscribe.value
@@ -327,9 +436,19 @@ const removeDriver = async () => {
 }
 
 const removeConsumer = async () => {
-  if (polly.value && driverIndex.value >= 0 && consumerIndex.value >= 0 && polly.value.drivers) {
+  if (
+    polly.value &&
+    driverIndex.value >= 0 &&
+    consumerIndex.value >= 0 &&
+    polly.value.drivers
+  ) {
     const driver = polly.value.drivers[driverIndex.value]
-    if (driver && driver.consumers && driver.consumers[consumerIndex.value] && driver.id) {
+    if (
+      driver &&
+      driver.consumers &&
+      driver.consumers[consumerIndex.value] &&
+      driver.id
+    ) {
       const consumerToRemove = driver.consumers[consumerIndex.value]
       if (consumerToRemove && consumerToRemove.id) {
         try {
@@ -343,36 +462,12 @@ const removeConsumer = async () => {
   }
 }
 
-const getDynamicParrotClass = (index : number) => {
-  if (index % 2 === 0 && index % 4 !== 0) {
-    return 'parrot-right'
-  }
-  else if (index % 3 === 0) {
-    return 'parrot-left'
-  }
-}
-
-const countProgress = (current: number, max: number) => {
-  if (current === 0 || max === 0) {
-    return 0
-  }
-  else {
-    return (current / max) * 100
-  }
-
-}
-
-const getProgressVariant = (current: number, max: number) => {
-  if (current >= max) {
-    return 'danger'
-  }
-  return 'info'
-}
-
 const openJoinModal = (index: number) => {
   joinDriverIndex.value = index
+  joinMode.value = 'driver'
   showJoinModal.value = true
 }
+
 const toggleExpanded = (driverIdx: number, consumerIdx: number) => {
   const currentSet = expandedItems.value.get(driverIdx) || new Set<number>()
   if (currentSet.has(consumerIdx)) {
@@ -392,7 +487,10 @@ const shareOnWhatsApp = () => {
 const shareOnTelegram = () => {
   const url = window.location.href
   const text = polly.value?.description || 'Carpool'
-  window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`, '_blank')
+  window.open(
+    `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`,
+    '_blank'
+  )
 }
 
 const shareViaSMS = () => {
@@ -414,7 +512,10 @@ const showNotificationSettings = () => {
   }
 }
 
-const showDriverNotificationSettings = (driverId: string, driverName: string | undefined) => {
+const showDriverNotificationSettings = (
+  driverId: string,
+  driverName: string | undefined
+) => {
   notificationModalType.value = 'driver'
   currentDriverId.value = driverId
   currentDriverName.value = driverName || 'Unknown Driver'
@@ -427,20 +528,27 @@ const onNotificationSaved = () => {
 
 const onConsumerAdded = async (consumer: { name: string; comments: string }) => {
   try {
-    // Show loading state
-    updatingDrivers.value.add(joinDriverIndex.value)
-    // Create consumer via API
-    if (polly.value && joinDriverIndex.value >= 0 && polly.value.drivers) {
-      const driver = polly.value.drivers[joinDriverIndex.value]
-      if (driver && driver.id) {
-        await dataService.createConsumer(id.value, driver.id, consumer)
+    if (joinMode.value === 'waitingList') {
+      await dataService.createWaitingListConsumer(id.value, consumer)
+    } else {
+      // Show loading state
+      updatingDrivers.value.add(joinDriverIndex.value)
+
+      // Create consumer via API
+      if (polly.value && joinDriverIndex.value >= 0 && polly.value.drivers) {
+        const driver = polly.value.drivers[joinDriverIndex.value]
+        if (driver && driver.id) {
+          await dataService.createConsumer(id.value, driver.id, consumer)
+        }
       }
     }
   } catch (error) {
     console.error('Error adding consumer:', error)
   } finally {
-    // Hide loading state
-    updatingDrivers.value.delete(joinDriverIndex.value)
+    if (joinMode.value !== 'waitingList') {
+      // Hide loading state
+      updatingDrivers.value.delete(joinDriverIndex.value)
+    }
   }
 }
 
@@ -458,24 +566,90 @@ const cancelEditingTitle = () => {
   editingTitle.value = ''
 }
 
-const funnyMessages = [
-  "Who will call shotgun first?",
-  "I hope it's not too cramped",
-  "The thinnest sits in the middle!",
-  "The oldest chooses the spot first!",
-  "I hope the trunk can handle the junk.",
-  "Don't forget to go to the bathroom before you leave.",
-  "I hope it's a SUV.",
-  "Fasten your seatbelts! The driver is responsible.",
-  "Please, keep the car clean. It's like a house. Don't go in with dirty shoes.",
-  "Let's prepare a singalong playlist! That's always nice.",
-  "Keep quiet in the back, the driver needs to concentrate.",
-  "If you don't keep quiet, you can resume the rest of the drive on foot!",
-  "Don't fight over the Nintendo, everyone get's a turn."
-]
+const toggleWaitingListExpanded = (index: number) => {
+  if (expandedWaitingListItems.value.has(index)) {
+    expandedWaitingListItems.value.delete(index)
+  } else {
+    expandedWaitingListItems.value.add(index)
+  }
+}
 
-const getRandomFunnyMessage = () => {
-  return funnyMessages[Math.floor(Math.random() * funnyMessages.length)]
+const confirmRemoveWaitingListConsumer = (index: number) => {
+  waitingListConsumerIndex.value = index
+  showRemoveWaitingListConsumerModal.value = true
+}
+
+const removeWaitingListConsumer = async () => {
+  if (polly.value && waitingListConsumerIndex.value >= 0 && polly.value.consumers) {
+    const consumer = polly.value.consumers[waitingListConsumerIndex.value]
+    if (consumer && consumer.id) {
+      try {
+        await dataService.deleteWaitingListConsumer(id.value, consumer.id)
+        showRemoveWaitingListConsumerModal.value = false
+      } catch (error) {
+        console.error('Error removing waiting list consumer:', error)
+      }
+    }
+  }
+}
+
+const openWaitingListJoinModal = () => {
+  joinMode.value = 'waitingList'
+  showJoinModal.value = true
+}
+
+// Drag and drop functionality
+const onPassengerDragStart = (
+  passenger: { id?: string; name: string; comments?: string },
+  index: number
+) => {
+  console.log('Passenger drag started:', passenger.name, index)
+}
+
+const onPassengerDragEnd = () => {
+  console.log('Passenger drag ended')
+}
+
+const onPassengerDropped = async (
+  driverIndex: number,
+  passenger: { id?: string; name: string; comments?: string }
+) => {
+  try {
+    if (polly.value && passenger.id) {
+      // Show loading state for the target driver
+      updatingDrivers.value.add(driverIndex)
+
+      // Move passenger from waiting list to driver
+      const driver = polly.value.drivers?.[driverIndex]
+      if (driver && driver.id) {
+        // Remove from waiting list (backend)
+        await dataService.deleteWaitingListConsumer(id.value, passenger.id)
+
+        // Add to driver (backend)
+        await dataService.createConsumer(id.value, driver.id, {
+          name: passenger.name,
+          comments: passenger.comments
+        })
+
+        // Update local state - remove from waiting list
+        if (polly.value.consumers) {
+          const consumerIndex = polly.value.consumers.findIndex(
+            (c) => c.id === passenger.id
+          )
+          if (consumerIndex !== -1) {
+            polly.value.consumers.splice(consumerIndex, 1)
+          }
+        }
+
+        console.log(`Moved passenger ${passenger.name} to driver ${driver.name}`)
+      }
+    }
+  } catch (error) {
+    console.error('Error moving passenger:', error)
+  } finally {
+    // Hide loading state
+    updatingDrivers.value.delete(driverIndex)
+  }
 }
 
 const saveTitle = async () => {
@@ -495,8 +669,9 @@ const saveTitle = async () => {
   }
 
   try {
-    const title = editingTitle.value.trim();
+    const title = editingTitle.value.trim()
     await dataService.updatePolly(id.value, { description: title })
+
     // Update locally for immediate UI feedback
     if (polly.value) {
       polly.value.description = title
@@ -508,6 +683,7 @@ const saveTitle = async () => {
   }
 }
 </script>
+
 <style>
 .car-card {
   position: relative;
@@ -585,8 +761,9 @@ const saveTitle = async () => {
     background-position: center;
   }
 }
+
 @media (max-width: 768px) {
-.car-card::after {
+  .car-card::after {
     content: '';
     position: absolute;
     bottom: -85px;
@@ -598,9 +775,9 @@ const saveTitle = async () => {
     background-size: cover;
     background-position: center;
   }
+
   .car-bcol {
     margin-bottom: 35px;
   }
 }
 </style>
-

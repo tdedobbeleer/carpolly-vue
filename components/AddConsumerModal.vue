@@ -1,5 +1,5 @@
 <template>
-  <BModal :model-value="modelValue" title="Join Driver" @ok="onSubmit($event)">
+  <BModal :model-value="modelValue" :title="mode === 'waitingList' ? 'Join waiting list' : 'Join Driver'" @ok="onSubmit($event)">
     <BForm>
       <BFormGroup label="Your Name:" label-for="consumerName">
         <BFormInput
@@ -26,13 +26,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps, defineEmits } from 'vue'
+import { ref } from 'vue'
 import { BModal, BForm, BFormGroup, BFormInput, BFormTextarea } from 'bootstrap-vue-next'
 import { BvTriggerableEvent } from 'bootstrap-vue-next'
 import { ValidationService } from '../services/validationService'
 
 defineProps<{
   modelValue: boolean
+  mode?: 'driver' | 'waitingList'
 }>()
 
 const emit = defineEmits<{
