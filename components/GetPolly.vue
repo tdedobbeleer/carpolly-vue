@@ -123,7 +123,7 @@
         </BRow>
 
         <!-- Waiting List Section -->
-        <BRow v-if="!isLoading && polly?.consumers?.length">
+        <BRow v-if="polly?.consumers && polly.consumers.length > 0">
           <div class="d-flex m-3">
             <h3>Waiting list</h3>
           </div>
@@ -140,10 +140,10 @@
                 }"
                 :passenger-index="index"
                 :expanded="expandedWaitingListItems.has(index)"
+                :passenger-to-move="passengerToMove"
                 @toggle-comments="toggleWaitingListExpanded"
                 @remove="confirmRemoveWaitingListConsumer"
-                @drag-start="onPassengerDragStart"
-                @drag-end="onPassengerDragEnd"
+                @start-moving-passenger="onStartMovingPassenger"
               />
             </div>
           </BCol>
@@ -151,8 +151,15 @@
 
         <!-- Drivers Section -->
         <BRow>
-          <div class="d-flex m-3">
-            <h2>Drivers and spots available</h2>
+          <BCol md="12">
+            <div class="d-flex m-2">
+              <h2>Drivers and spots available</h2>
+            </div>
+          </BCol>
+        </BRow>
+        <BRow>
+          <BCol md="12">
+          <div class="d-flex mb-3">
             <BButton class="ms-auto" @click="addDriverModal?.show()">
               I'm a driver! <span class="bi bi-car-front-fill"></span>
             </BButton>
@@ -165,6 +172,7 @@
               I'm a passenger! <i class="bi bi-person-walking"></i>
             </BButton>
           </div>
+          </BCol>
         </BRow>
 
         <BRow v-if="!polly?.drivers?.length">
@@ -181,23 +189,25 @@
         <BRow v-else class="row-cols-1 row-cols-md-2 g-4">
           <BCol
             class="car-bcol"
-            v-for="(driver, index) in polly?.drivers"
-            :key="index"
+            v-for="(driver, index) in sortedDriversByInitialSpots"
+            :key="driver.id || index"
           >
             <DroppableDriver
               :driver="driver"
               :driver-index="index"
-              :is-updating="updatingDrivers.has(index)"
-              :expanded-consumer-items="expandedItems.get(index) || new Set()"
+              :is-updating="updatingDrivers.has(polly?.drivers?.findIndex(d => d.id === driver.id) ?? index)"
+              :expanded-consumer-items="expandedItems.get(polly?.drivers?.findIndex(d => d.id === driver.id) ?? index) || new Set()"
               :driver-subscriptions="driverSubscriptions"
               :waiting-list-consumers="polly.consumers"
+              :passenger-to-move="passengerToMove"
               @edit-driver="openEditDriverModal"
-              @join-driver="openJoinModal"
-              @remove-driver="confirmRemove"
+              @join-driver="(index) => openJoinModal(polly?.drivers?.findIndex(d => d.id === driver.id) ?? index)"
+              @remove-driver="(index) => confirmRemove(polly?.drivers?.findIndex(d => d.id === driver.id) ?? index)"
               @remove-consumer="confirmRemoveConsumer"
               @toggle-consumer-comments="toggleExpanded"
               @driver-notifications="showDriverNotificationSettings"
               @passenger-dropped="onPassengerDropped"
+              @move-passenger-to-driver="onMovePassengerToDriver"
             />
           </BCol>
         </BRow>
@@ -214,6 +224,10 @@
 
     <BModal v-model="showRemoveModal" title="Confirm Removal" @ok="removeDriver">
       <p>Are you sure you want to remove this driver?</p>
+      <p class="text-muted small">
+        <i class="bi bi-info-circle"></i>
+        Any passengers in this driver will be moved to the waiting list and can join another driver.
+      </p>
     </BModal>
 
     <BModal
@@ -324,6 +338,12 @@ const waitingListConsumerIndex = ref(-1)
 
 const joinMode = ref<'driver' | 'waitingList'>('driver')
 
+// New state for move mode
+const passengerToMove = ref<{ id?: string; name: string; comments?: string } | null>(null)
+
+// Store initial available spots for each driver (for static sorting)
+const driverInitialAvailableSpots = ref<Map<string, number>>(new Map())
+
 const canJoinWaitingList = computed(
   () =>
     !polly.value?.drivers?.length ||
@@ -331,6 +351,28 @@ const canJoinWaitingList = computed(
       (d) => (d.consumers?.length || 0) >= (d.spots || 0)
     )
 )
+
+// Store initial available spots when polly is first loaded
+const storeInitialDriverSpots = () => {
+  if (polly.value?.drivers && driverInitialAvailableSpots.value.size === 0) {
+    polly.value.drivers.forEach(driver => {
+      const initialAvailableSpots = (driver.spots || 0) - (driver.consumers?.length || 0)
+      driverInitialAvailableSpots.value.set(driver.id || '', initialAvailableSpots)
+    })
+    console.log('Stored initial driver spots:', Array.from(driverInitialAvailableSpots.value.entries()))
+  }
+}
+
+// Sort drivers by initial available spots (static order)
+const sortedDriversByInitialSpots = computed(() => {
+  if (!polly.value?.drivers) return []
+
+  return [...polly.value.drivers].sort((a, b) => {
+    const initialSpotsA = driverInitialAvailableSpots.value.get(a.id || '') ?? 0
+    const initialSpotsB = driverInitialAvailableSpots.value.get(b.id || '') ?? 0
+    return initialSpotsB - initialSpotsA // Descending order
+  })
+})
 
 // Reactive notification states
 const notificationState = ref(0)
@@ -374,6 +416,7 @@ onMounted(() => {
   unsubscribe.value = dataService.subscribeToPolly(id.value, (data) => {
     polly.value = data
     isLoading.value = false
+    storeInitialDriverSpots() // Store initial spots only once when polly loads
     loadSubscriptionStates()
   })
 
@@ -423,16 +466,60 @@ const confirmRemoveConsumer = (driverIdx: number, consIdx: number) => {
 }
 
 const removeDriver = async () => {
+  console.log('removeDriver called with driverIndex:', driverIndex.value)
   if (polly.value && driverIndex.value >= 0 && polly.value.drivers) {
-    const driverToRemove = polly.value.drivers[driverIndex.value]
+    const driverToRemove = polly.value.drivers?.[driverIndex.value]
     if (driverToRemove && driverToRemove.id) {
       try {
+        console.log(`Starting removal process for driver: ${driverToRemove.name} (ID: ${driverToRemove.id})`)
+        // Move passengers from the deleted driver to the waiting list
+        if (driverToRemove.consumers && driverToRemove.consumers.length > 0) {
+          console.log(`Moving ${driverToRemove.consumers.length} passengers from deleted driver to waiting list`)
+
+          let movedCount = 0
+          let failedCount = 0
+
+          // Create each consumer in the waiting list with individual error handling
+          for (const consumer of driverToRemove.consumers) {
+            if (consumer.name && consumer.name.trim()) { // Only add consumers with valid names
+              try {
+                await dataService.createWaitingListConsumer(id.value, {
+                  name: consumer.name.trim(),
+                  comments: consumer.comments
+                })
+                movedCount++
+                console.log(`Successfully moved passenger: ${consumer.name}`)
+              } catch (consumerError) {
+                failedCount++
+                console.error(`Failed to move passenger ${consumer.name} to waiting list:`, consumerError)
+                // Continue with other passengers even if one fails
+              }
+            } else {
+              failedCount++
+              console.warn(`Skipping passenger with invalid name: ${consumer.name}`)
+            }
+          }
+
+          console.log(`Passenger move results: ${movedCount} moved, ${failedCount} failed`)
+        }
+
+        // Delete the driver (this should always happen regardless of passenger move results)
+        console.log(`Deleting driver: ${driverToRemove.name}`)
         await dataService.deleteDriver(id.value, driverToRemove.id)
+        console.log(`Driver ${driverToRemove.name} deleted successfully`)
+
+        // Close modal on success
         showRemoveModal.value = false
+        console.log('Driver removal completed successfully')
       } catch (error) {
         console.error('Error removing driver:', error)
+
+        // Show error message to user
+        alert(`Failed to remove driver: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`)
       }
     }
+  } else {
+    console.log('removeDriver: Missing required data (polly, driverIndex, or drivers)')
   }
 }
 
@@ -443,14 +530,14 @@ const removeConsumer = async () => {
     consumerIndex.value >= 0 &&
     polly.value.drivers
   ) {
-    const driver = polly.value.drivers[driverIndex.value]
+    const driver = polly.value.drivers?.[driverIndex.value]
     if (
       driver &&
       driver.consumers &&
       driver.consumers[consumerIndex.value] &&
       driver.id
     ) {
-      const consumerToRemove = driver.consumers[consumerIndex.value]
+      const consumerToRemove = driver.consumers?.[consumerIndex.value]
       if (consumerToRemove && consumerToRemove.id) {
         try {
           await dataService.deleteConsumer(id.value, driver.id, consumerToRemove.id)
@@ -537,9 +624,20 @@ const onConsumerAdded = async (consumer: { name: string; comments: string }) => 
 
       // Create consumer via API
       if (polly.value && joinDriverIndex.value >= 0 && polly.value.drivers) {
-        const driver = polly.value.drivers[joinDriverIndex.value]
+        const driver = polly.value.drivers?.[joinDriverIndex.value]
         if (driver && driver.id) {
           await dataService.createConsumer(id.value, driver.id, consumer)
+
+          // Remove passenger from waiting list (local state update)
+          if (polly.value.consumers) {
+            const waitingListIndex = polly.value.consumers.findIndex(
+              (c) => c.name === consumer.name && c.comments === consumer.comments
+            )
+            if (waitingListIndex !== -1) {
+              polly.value.consumers.splice(waitingListIndex, 1)
+              console.log(`Removed passenger ${consumer.name} from waiting list`)
+            }
+          }
         }
       }
     }
@@ -582,7 +680,7 @@ const confirmRemoveWaitingListConsumer = (index: number) => {
 
 const removeWaitingListConsumer = async () => {
   if (polly.value && waitingListConsumerIndex.value >= 0 && polly.value.consumers) {
-    const consumer = polly.value.consumers[waitingListConsumerIndex.value]
+    const consumer = polly.value.consumers?.[waitingListConsumerIndex.value]
     if (consumer && consumer.id) {
       try {
         await dataService.deleteWaitingListConsumer(id.value, consumer.id)
@@ -599,29 +697,89 @@ const openWaitingListJoinModal = () => {
   showJoinModal.value = true
 }
 
-// Drag and drop functionality
-const onPassengerDragStart = (
-  passenger: { id?: string; name: string; comments?: string },
+// Move mode functionality
+const onStartMovingPassenger = (
+  passenger: { id?: string; name: string; comments?: string } | null,
   index: number
 ) => {
-  console.log('Passenger drag started:', passenger.name, index)
+  if (passenger) {
+    console.log('Starting move mode for passenger:', passenger.name, index)
+    passengerToMove.value = passenger
+  } else {
+    console.log('Cancelling move mode')
+    passengerToMove.value = null
+  }
 }
 
-const onPassengerDragEnd = () => {
-  console.log('Passenger drag ended')
+const onMovePassengerToDriver = async (sortedDriverIndex: number) => {
+  if (!passengerToMove.value || !polly.value?.drivers) return
+
+  // Find the actual driver in the original array using the sorted order
+  const sortedDriver = sortedDriversByInitialSpots.value[sortedDriverIndex]
+  if (!sortedDriver) return
+
+  const actualDriverIndex = polly.value.drivers.findIndex(d => d.id === sortedDriver.id)
+  if (actualDriverIndex === -1) return
+
+  try {
+    // Show loading state for the target driver
+    updatingDrivers.value.add(actualDriverIndex)
+
+    if (passengerToMove.value.id) {
+      // Move passenger from waiting list to driver
+      const driver = polly.value.drivers?.[actualDriverIndex]
+      if (driver && driver.id) {
+        // Remove from waiting list (backend)
+        await dataService.deleteWaitingListConsumer(id.value, passengerToMove.value.id)
+
+        // Add to driver (backend)
+        await dataService.createConsumer(id.value, driver.id, {
+          name: passengerToMove.value.name,
+          comments: passengerToMove.value.comments
+        })
+
+        // Update local state - remove from waiting list
+        if (polly.value.consumers) {
+          const consumerIndex = polly.value.consumers.findIndex(
+            (c) => c.id === passengerToMove.value!.id
+          )
+          if (consumerIndex !== -1) {
+            polly.value.consumers.splice(consumerIndex, 1)
+          }
+        }
+
+        console.log(`Moved passenger ${passengerToMove.value.name} to driver ${driver.name}`)
+
+        // Clear move mode
+        passengerToMove.value = null
+      }
+    }
+  } catch (error) {
+    console.error('Error moving passenger:', error)
+  } finally {
+    // Hide loading state
+    updatingDrivers.value.delete(actualDriverIndex)
+  }
 }
 
 const onPassengerDropped = async (
-  driverIndex: number,
+  sortedDriverIndex: number,
   passenger: { id?: string; name: string; comments?: string }
 ) => {
   try {
-    if (polly.value && passenger.id) {
+    if (polly.value?.drivers && passenger.id) {
+      // Find the actual driver in the original array using the sorted order
+      const sortedDriver = sortedDriversByInitialSpots.value[sortedDriverIndex]
+      if (!sortedDriver) return
+
+      const actualDriverIndex = polly.value.drivers.findIndex(d => d.id === sortedDriver.id)
+      if (actualDriverIndex === -1) return
+
       // Show loading state for the target driver
-      updatingDrivers.value.add(driverIndex)
+      updatingDrivers.value.add(actualDriverIndex)
 
       // Move passenger from waiting list to driver
-      const driver = polly.value.drivers?.[driverIndex]
+      const driver = polly.value.drivers?.[actualDriverIndex]
       if (driver && driver.id) {
         // Remove from waiting list (backend)
         await dataService.deleteWaitingListConsumer(id.value, passenger.id)
@@ -648,8 +806,14 @@ const onPassengerDropped = async (
   } catch (error) {
     console.error('Error moving passenger:', error)
   } finally {
-    // Hide loading state
-    updatingDrivers.value.delete(driverIndex)
+    // Hide loading state (need to find actual index again)
+    const sortedDriver = sortedDriversByInitialSpots.value[sortedDriverIndex]
+    if (polly.value?.drivers && sortedDriver) {
+      const actualDriverIndex = polly.value.drivers.findIndex(d => d.id === sortedDriver.id)
+      if (actualDriverIndex !== -1) {
+        updatingDrivers.value.delete(actualDriverIndex)
+      }
+    }
   }
 }
 
@@ -782,3 +946,4 @@ const saveTitle = async () => {
   }
 }
 </style>
+

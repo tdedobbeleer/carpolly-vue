@@ -1,10 +1,10 @@
 <template>
   <BCard
+    ref="driverCard"
     class="border-info shadow car-card h-100 position-relative droppable-driver"
-    :class="[getDynamicParrotClass(driverIndex + 1), { 'drop-zone-active': isDragOver, 'driver-full': isDriverFull }]"
-    @dragover="onDragOver"
-    @dragleave="onDragLeave"
-    @drop="onDrop"
+    :class="[getDynamicParrotClass(driverIndex + 1), { 'driver-full': isDriverFull, 'move-target-active': isMoveTargetActive }]"
+    @click="handleDriverClick"
+    :data-driver-index="driverIndex"
   >
     <div v-if="isUpdating" class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-flex align-items-center justify-content-center" style="z-index: 10;">
       <div class="spinner-border text-primary" role="status">
@@ -12,7 +12,7 @@
       </div>
     </div>
 
-    <BCardHeader class="driver-header position-relative" @click="$emit('edit-driver', driver)">
+    <BCardHeader class="driver-header position-relative" @click.stop="$emit('edit-driver', driver)">
       <div class="text-center">
         <BButton variant="primary" size="lg" disabled class="position-relative">
           <i class="bi bi-car-front"></i>
@@ -37,9 +37,10 @@
     </BCardHeader>
 
     <BCardBody>
-      <div class="drop-zone-hint mb-2" v-if="shouldShowDropHint">
+      <!-- Move target drop zone - shown when a passenger is being moved -->
+      <div class="move-drop-zone mb-2" v-if="isMoveTargetActive && !isDriverFull">
         <small class="text-muted">
-          <i class="bi bi-arrow-down-circle"></i> Drop passengers here
+          <i class="bi bi-arrow-down-circle"></i> Drop passenger here
         </small>
       </div>
 
@@ -92,7 +93,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { BCard, BCardBody, BCardFooter, BCardHeader, BListGroup, BListGroupItem, BButton, BButtonGroup, BProgress, BBadge } from 'bootstrap-vue-next'
 // import { NotificationService } from '../services/notificationService'
 import type { Driver } from '../models/driver.model'
@@ -105,13 +106,16 @@ interface Props {
   expandedConsumerItems?: Set<number>
   driverSubscriptions?: Record<string, boolean>
   waitingListConsumers?: Consumer[]
+  // New props for move mode
+  passengerToMove?: { id?: string; name: string; comments?: string } | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isUpdating: false,
   expandedConsumerItems: () => new Set(),
   driverSubscriptions: () => ({}),
-  waitingListConsumers: () => []
+  waitingListConsumers: () => [],
+  passengerToMove: null
 })
 
 const emit = defineEmits<{
@@ -121,53 +125,25 @@ const emit = defineEmits<{
   'remove-consumer': [driverIndex: number, consumerIndex: number]
   'toggle-consumer-comments': [driverIndex: number, consumerIndex: number]
   'passenger-dropped': [driverIndex: number, passenger: { id?: string; name: string; comments?: string }]
+  'move-passenger-to-driver': [driverIndex: number]
 }>()
 
-const isDragOver = ref(false)
+// Check if this driver is a valid move target
+const isMoveTargetActive = computed(() => {
+  return props.passengerToMove !== null && !isDriverFull.value
+})
+
+const handleDriverClick = () => {
+  // If there's a passenger being moved and this driver is not full, move the passenger
+  if (props.passengerToMove && !isDriverFull.value) {
+    console.log(`Moving passenger ${props.passengerToMove.name} to driver ${props.driver.name}`)
+    emit('move-passenger-to-driver', props.driverIndex)
+  }
+}
 
 const isDriverFull = computed(() => {
   return (props.driver.consumers?.length || 0) >= (props.driver.spots || 0)
 })
-
-const hasWaitingListConsumers = computed(() => {
-  return props.waitingListConsumers && props.waitingListConsumers.length > 0
-})
-
-const shouldShowDropHint = computed(() => {
-  return !isDriverFull.value && hasWaitingListConsumers.value
-})
-
-const onDragOver = (event: DragEvent) => {
-  event.preventDefault()
-  if (event.dataTransfer) {
-    event.dataTransfer.dropEffect = 'move'
-  }
-  isDragOver.value = true
-  console.log('Drag over driver:', props.driver.name)
-}
-
-const onDragLeave = () => {
-  isDragOver.value = false
-  console.log('Drag left driver:', props.driver.name)
-}
-
-const onDrop = (event: DragEvent) => {
-  event.preventDefault()
-  isDragOver.value = false
-
-  console.log('Drop on driver:', props.driver.name)
-
-  try {
-    const dragData = JSON.parse(event.dataTransfer?.getData('text/plain') || '{}')
-    console.log('Drop data:', dragData)
-
-    if (dragData.type === 'passenger' && dragData.fromWaitingList) {
-      emit('passenger-dropped', props.driverIndex, dragData.passenger)
-    }
-  } catch (error) {
-    console.error('Error parsing drag data:', error)
-  }
-}
 
 const getDynamicParrotClass = (index: number) => {
   if (index % 2 === 0 && index % 4 !== 0) {
@@ -211,9 +187,24 @@ const funnyMessages = [
 ]
 
 const getRandomFunnyMessage = () => {
-  return funnyMessages[Math.floor(Math.random() * funnyMessages.length)]
-}
+  // Generate a unique key for this driver
+  const driverKey = `funnyMessage_${props.driver.id || props.driverIndex}`
 
+  // Check if message already exists in sessionStorage
+  const storedMessage = sessionStorage.getItem(driverKey)
+  if (storedMessage) {
+    return storedMessage
+  }
+
+  // Generate and store a new random message
+  const randomIndex = Math.floor(Math.random() * funnyMessages.length)
+  const selectedMessage = funnyMessages[randomIndex] ?? funnyMessages[0]!
+
+  // Store the message in sessionStorage
+  sessionStorage.setItem(driverKey, selectedMessage)
+
+  return selectedMessage
+}
 
 </script>
 
@@ -222,10 +213,9 @@ const getRandomFunnyMessage = () => {
   transition: all 0.3s ease;
 }
 
-.droppable-driver.drop-zone-active {
-  border-color: #28a745;
-  box-shadow: 0 0 15px rgba(40, 167, 69, 0.3);
-  transform: translateY(-2px);
+.droppable-driver.move-target-active {
+  border-color: #6c757d !important;
+  cursor: pointer;
 }
 
 .droppable-driver.driver-full {
@@ -239,12 +229,24 @@ const getRandomFunnyMessage = () => {
   border-radius: 4px;
   border: 2px dashed #dee2e6;
   transition: all 0.3s ease;
+  margin-bottom: 8px;
+  display: block !important; /* Ensure it's always visible when condition is met */
 }
 
-.droppable-driver.drop-zone-active .drop-zone-hint {
-  background-color: #d4edda;
-  border-color: #28a745;
-  color: #155724;
+.move-drop-zone {
+  text-align: center;
+  padding: 8px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 2px dashed #dee2e6;
+  transition: all 0.3s ease;
+  margin-bottom: 8px;
+  display: block !important;
+}
+
+.droppable-driver.move-target-active .move-drop-zone {
+  border-color: #6c757d;
+  background-color: #f5f5f5;
 }
 
 .driver-header {

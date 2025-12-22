@@ -1,10 +1,13 @@
 <template>
   <div
-    :draggable="true"
-    @dragstart="onDragStart"
-    @dragend="onDragEnd"
-    :class="{ 'dragging': isDragging }"
-    class="draggable-passenger list-group-item list-group-item-action"
+    @click="toggleMoveMode"
+    :class="{
+      'passenger-move-mode': isInMoveMode,
+      'passenger-move-candidate': isMoveCandidate,
+      'click-to-move': !isInMoveMode
+    }"
+    class="passenger-item list-group-item list-group-item-action"
+    :data-passenger-index="passengerIndex"
   >
     {{ passenger.name }}
     <div class="float-end">
@@ -18,11 +21,18 @@
     <div v-if="expanded && passenger.comments" class="mt-2">
       <i>{{ passenger.comments }}</i>
     </div>
+
+    <!-- Move mode indicator -->
+    <div v-if="isInMoveMode" class="move-mode-indicator">
+      <small class="text-muted">
+        <i class="bi bi-arrow-left-right"></i> Click a driver below to move
+      </small>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed } from 'vue'
 import { BButton } from 'bootstrap-vue-next'
 
 interface Props {
@@ -33,52 +43,43 @@ interface Props {
   }
   passengerIndex: number
   expanded?: boolean
+  // New props for move mode
+  passengerToMove?: { id?: string; name: string; comments?: string } | null
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<{
   'toggle-comments': [index: number]
   'remove': [index: number]
-  'drag-start': [passenger: { id?: string; name: string; comments?: string }, index: number]
-  'drag-end': []
+  'start-moving-passenger': [passenger: { id?: string; name: string; comments?: string } | null, index: number]
+  'move-passenger-to-driver': [driverIndex: number]
 }>()
 
-const isDragging = ref(false)
+// Check if this passenger is currently being moved
+const isInMoveMode = computed(() => {
+  return props.passengerToMove?.id === props.passenger.id
+})
 
-const onDragStart = (event: DragEvent) => {
-  console.log('Drag started for passenger:', props.passenger.name)
-  isDragging.value = true
+// Check if this passenger is the one that will be moved (when another passenger is selected)
+const isMoveCandidate = computed(() => {
+  return props.passengerToMove && props.passengerToMove.id !== props.passenger.id
+})
 
-  // Set drag data
-  const dragData = {
-    type: 'passenger',
-    passenger: props.passenger,
-    sourceIndex: props.passengerIndex,
-    fromWaitingList: true
+const toggleMoveMode = () => {
+  if (isInMoveMode.value) {
+    // Cancel move mode
+    emit('start-moving-passenger', null, -1)
+  } else {
+    // Start move mode for this passenger
+    console.log('Starting move mode for passenger:', props.passenger.name)
+    emit('start-moving-passenger', props.passenger, props.passengerIndex)
   }
-
-  if (event.dataTransfer) {
-    event.dataTransfer.setData('text/plain', JSON.stringify(dragData))
-    event.dataTransfer.effectAllowed = 'move'
-
-    // Also set some default drag image for better UX
-    const dragImage = new Image()
-    dragImage.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMSIgaGVpZ2h0PSIxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjx0ZXh0IHg9IjAiIHk9IjAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzAwN2ZmZiI+4KiCPC90ZXh0Pjwvc3ZnPg=='
-    event.dataTransfer.setDragImage(dragImage, 0, 0)
-  }
-
-  emit('drag-start', props.passenger, props.passengerIndex)
-}
-
-const onDragEnd = () => {
-  isDragging.value = false
-  emit('drag-end')
 }
 </script>
 
 <style scoped>
-.draggable-passenger {
-  cursor: grab;
+.passenger-item {
+  cursor: pointer;
   transition: all 0.2s ease;
   border: 1px solid #dee2e6;
   margin-bottom: 4px;
@@ -88,19 +89,48 @@ const onDragEnd = () => {
   -ms-user-select: none;
 }
 
-.draggable-passenger:hover {
+.passenger-item:hover {
   background-color: #f8f9fa;
   border-color: #007bff;
 }
 
-.draggable-passenger.dragging {
-  opacity: 0.5;
-  cursor: grabbing;
-  transform: rotate(2deg);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+.passenger-item.click-to-move {
+  cursor: pointer;
 }
 
-.draggable-passenger:active {
-  cursor: grabbing;
+.passenger-item.passenger-move-mode {
+  opacity: 0.7;
+  border-color: #28a745;
+  background-color: #d4edda;
+  transform: scale(0.98);
+  box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
+}
+
+.passenger-item.passenger-move-candidate {
+  opacity: 0.5;
+}
+
+.passenger-item:active {
+  transform: scale(0.97);
+}
+
+.move-mode-indicator {
+  margin-top: 8px;
+  padding: 4px 8px;
+  background-color: #e7f3ff;
+  border-radius: 4px;
+  border: 1px solid #b8daff;
+}
+
+/* Touch device styles */
+@media (hover: none) and (pointer: coarse) {
+  .passenger-item {
+    cursor: default;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .passenger-item:active {
+    background-color: #e9ecef;
+  }
 }
 </style>
